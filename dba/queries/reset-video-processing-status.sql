@@ -1,0 +1,1 @@
+update videos SET processed_at = null

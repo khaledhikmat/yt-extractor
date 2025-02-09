@@ -1,0 +1,1 @@
+INSERT INTO api_keys (key, started_at, expires_at) VALUES ('gsahg6532_uyeuwyuyggas45234ghgas_opo', NOW(), NOW() + INTERVAL '1 year')

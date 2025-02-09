@@ -1,0 +1,5 @@
+.dapr
+.env
+build/
+dist/
+youtube*
