@@ -23,8 +23,9 @@ const (
 )
 
 var jobProcs = map[data.JobType]job.Processor{
-	data.JobTypeAttributes: jobattributes.Processor,
-	data.JobTypeExtraction: jobextraction.Processor,
+	data.JobTypeAttributes:        jobattributes.Processor,
+	data.JobTypeExtraction:        jobextraction.Processor,
+	data.JobTypeErroredExtraction: jobextraction.Processor,
 }
 
 func apiRoutes(ctx context.Context,
@@ -106,6 +107,76 @@ func apiRoutes(ctx context.Context,
 		if err != nil {
 			c.JSON(400, gin.H{
 				"message": fmt.Sprintf("retrieve videos produced %s", err.Error()),
+			})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"data": videos,
+		})
+	})
+
+	r.GET("/videos/unextracted", func(c *gin.Context) {
+		isPermitted := isPermitted(c, datasvc)
+		if !isPermitted {
+			c.JSON(403, gin.H{
+				"message": "Invalid or missing API key",
+			})
+			return
+		}
+
+		channelID := c.Query("c")
+		if channelID == "" {
+			c.JSON(400, gin.H{
+				"message": "channel ID is required",
+			})
+			return
+		}
+
+		pageSize, e := strconv.Atoi(c.Query("s"))
+		if e != nil {
+			pageSize = 50
+		}
+
+		videos, err := datasvc.RetrieveUnextractedVideos(channelID, pageSize)
+		if err != nil {
+			c.JSON(400, gin.H{
+				"message": fmt.Sprintf("retrieve unextracted videos produced %s", err.Error()),
+			})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"data": videos,
+		})
+	})
+
+	r.GET("/videos/errored", func(c *gin.Context) {
+		isPermitted := isPermitted(c, datasvc)
+		if !isPermitted {
+			c.JSON(403, gin.H{
+				"message": "Invalid or missing API key",
+			})
+			return
+		}
+
+		channelID := c.Query("c")
+		if channelID == "" {
+			c.JSON(400, gin.H{
+				"message": "channel ID is required",
+			})
+			return
+		}
+
+		pageSize, e := strconv.Atoi(c.Query("s"))
+		if e != nil {
+			pageSize = 50
+		}
+
+		videos, err := datasvc.RetrieveErroredVideos(channelID, pageSize)
+		if err != nil {
+			c.JSON(400, gin.H{
+				"message": fmt.Sprintf("retrieve errored videos produced %s", err.Error()),
 			})
 			return
 		}
@@ -459,6 +530,15 @@ func ProcessJob(ctx context.Context,
 	proc, ok := jobProcs[job.Type]
 	if !ok {
 		return -1, fmt.Errorf("job type %s does not have a processor", job.Type)
+	}
+
+	// Check to make sure there is no existing job for the same type and channel
+	isPending, err := datasvc.IsPendingJobsByTypeNChannel(job.ChannelID, job.Type)
+	if err != nil {
+		return -1, fmt.Errorf("is pending jobs by type and channel produced %s", err.Error())
+	}
+	if isPending {
+		return -1, fmt.Errorf("job type %s for channel %s is already pending", job.Type, job.ChannelID)
 	}
 
 	// Force an initial state

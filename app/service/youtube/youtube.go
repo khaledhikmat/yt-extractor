@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/khaledhikmat/yt-extractor/service"
 	"github.com/khaledhikmat/yt-extractor/service/config"
 	"github.com/khaledhikmat/yt-extractor/service/lgr"
 	"github.com/khaledhikmat/yt-extractor/utils"
@@ -93,6 +94,8 @@ func (svc *youtubService) ExtractVideos(ctx context.Context, errorStream chan er
 		mp4File, err := runYTDLPExtractor(extractVideoID(URL), URL, svc.ConfigSvc.GetLocalVideosFolder(), svc.ConfigSvc.GetLocalCodecsFolder())
 		if err != nil {
 			errorStream <- fmt.Errorf("error extracting video %s: %v", URL, err)
+			// Indicate an error by mapping the video URL to not available extraction URL
+			results[URL] = service.UnextractedVideoURL
 			continue
 		}
 

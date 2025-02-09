@@ -33,10 +33,11 @@ const (
 type JobType string
 
 const (
-	JobTypeAttributes      JobType = "attributes"
-	JobTypeExtraction      JobType = "extraction"
-	JobTypeProcessing      JobType = "processing"
-	JobTypeExternalization JobType = "externalization"
+	JobTypeAttributes        JobType = "attributes"
+	JobTypeExtraction        JobType = "extraction"
+	JobTypeErroredExtraction JobType = "erroredextraction"
+	JobTypeProcessing        JobType = "processing"
+	JobTypeExternalization   JobType = "externalization"
 )
 
 type Job struct {

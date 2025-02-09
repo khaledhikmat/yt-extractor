@@ -32,6 +32,9 @@ go get -u github.com/google/uuid
 | API_PORT       | `8080`  | HTTP Server port. Required to expose API Endpoints. |
 | RUN_TIME_ENV  | `dev`  | Runetime env name.  |
 | PARSE_CODEC  | `false`  | Whether to parse codec or not.  |
+| PERIODIC_EXTRACTION | `true` | Whether to run a periodic extraction |
+| EXTRACTION_PERIOD | 15 | Number of minutes for extraction interval |
+| EXTRACTION_CHANNEL_ID | `yt_channel_id` | Youtune channel ID to use for the periodic extraction |
 | LOCAL_CODEC_FOLDER  | `codecs`  | folder.  |
 | LOCAL_VIDEOS_FOLDER  | `videos`  | folder.  |
 | STORAGE_PROVIDER | `s3` | |

@@ -8,6 +8,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // Import the PostgreSQL driver
 
+	"github.com/khaledhikmat/yt-extractor/service"
 	"github.com/khaledhikmat/yt-extractor/service/config"
 )
 
@@ -27,6 +28,9 @@ var updateytexternalizationSQL string
 
 //go:embed sql/updatevideo_ytextraction.sql
 var updateytextractionSQL string
+
+//go:embed sql/updatevideo_yterroredextraction.sql
+var updateyterroredextractionSQL string
 
 //go:embed sql/updatevideo_ytprocessing.sql
 var updateytprocessingSQL string
@@ -131,6 +135,8 @@ func (svc *dataService) UpdateVideo(video *Video, jobType JobType) error {
 		_, err = svc.Db.Exec(updateytexternalizationSQL, video.ID)
 	} else if jobType == JobTypeExtraction {
 		_, err = svc.Db.Exec(updateytextractionSQL, video.ExtractionURL, video.ID)
+	} else if jobType == JobTypeErroredExtraction {
+		_, err = svc.Db.Exec(updateyterroredextractionSQL, video.ExtractionURL, video.ID)
 	} else if jobType == JobTypeProcessing {
 		_, err = svc.Db.Exec(updateytprocessingSQL, video.ID)
 	} else {
@@ -263,6 +269,34 @@ func (svc *dataService) RetrieveUnextractedVideos(channelID string, max int) ([]
 	return videos, nil
 }
 
+func (svc *dataService) RetrieveErroredVideos(channelID string, max int) ([]Video, error) {
+	videos := []Video{}
+	err := svc.dbConnection()
+	if err != nil {
+		return videos, err
+	}
+
+	// The errored videos have not-available extraction-URL
+	// and it has not been more than 24 hours since the extraction.
+	// The last clause is to prevent the errored videos from being picked up perpetually.
+	query := `
+        SELECT * FROM videos 
+		WHERE channel_id = $1 
+		AND extracted_at is not null 
+		AND extraction_url = $2
+		AND extracted_at >= NOW() - INTERVAL '24 HOURS'
+		ORDER BY published_at DESC 
+		LIMIT $3 
+    `
+
+	err = svc.Db.Select(&videos, query, channelID, service.UnextractedVideoURL, max)
+	if err != nil {
+		return videos, err
+	}
+
+	return videos, nil
+}
+
 func (svc *dataService) RetrieveUnexternalizedVideos(channelID string, max int) ([]Video, error) {
 	videos := []Video{}
 	err := svc.dbConnection()
@@ -294,15 +328,17 @@ func (svc *dataService) RetrieveUnprocessedVideos(channelID string, max int) ([]
 		return videos, err
 	}
 
-	query := `
+	// Prevent unprocessed query to pick up errored extractions
+	query := fmt.Sprintf(`
         SELECT * FROM videos 
 		WHERE channel_id = $1 
 		AND externalized_at is not null 
 		AND extracted_at is not null 
+		AND extraction_url != '%s' 
 		AND processed_at is null 
 		ORDER BY published_at DESC 
 		LIMIT $2 
-    `
+    `, service.UnextractedVideoURL)
 
 	err = svc.Db.Select(&videos, query, channelID, max)
 	if err != nil {
@@ -400,6 +436,29 @@ func (svc *dataService) RetrieveJobByID(id int64) (Job, error) {
 	}
 
 	return jobs[0], nil
+}
+
+func (svc *dataService) IsPendingJobsByTypeNChannel(channelID string, jobType JobType) (bool, error) {
+	err := svc.dbConnection()
+	if err != nil {
+		return false, err
+	}
+
+	var jobs []Job
+	query := `
+        SELECT * FROM jobs 
+		WHERE  channel_id = $1
+		AND type = $2
+		AND state IN ($3, $4) 
+		LIMIT 1
+    `
+
+	err = svc.Db.Select(&jobs, query, channelID, jobType, JobStateQueued, JobStateRunning)
+	if err != nil {
+		return false, err
+	}
+
+	return len(jobs) > 0, nil
 }
 
 func (svc *dataService) NewAPIKey(key string) error {

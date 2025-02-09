@@ -8,6 +8,7 @@ type IService interface {
 
 	RetrieveVideos(channelID string, page, pageSize int, orderBy, orderDir string) ([]Video, error)
 	RetrieveUnextractedVideos(channelID string, max int) ([]Video, error)
+	RetrieveErroredVideos(channelID string, max int) ([]Video, error)
 	RetrieveUnexternalizedVideos(channelID string, max int) ([]Video, error)
 	RetrieveUnprocessedVideos(channelID string, max int) ([]Video, error)
 	RetrieveUpdatedVideos(channelID string, max int) ([]Video, error)
@@ -18,6 +19,7 @@ type IService interface {
 	NewJob(job Job) (int64, error)
 	UpdateJob(job *Job) error
 	RetrieveJobByID(id int64) (Job, error)
+	IsPendingJobsByTypeNChannel(channelID string, jobType JobType) (bool, error)
 
 	NewAPIKey(key string) error
 	IsAPIKeyValid(key string) (bool, error)

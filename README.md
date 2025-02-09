@@ -84,6 +84,7 @@ These automations require a Youtube channel ID to operarte on and an API Key:
 |-----------------|-----------------------------------|----------|------|
 | Pull            | Request yt videos be pulled from Youtube using API  | Every 24 hrs | -1 |
 | Extract         | Request unextracted yt videos be extracted into S3   | Every 15 Minutes | 10 |
+| Error | Request errored extractions be re-attempted   | Every 1 Hour | 10 |
 | Externalization | Export extracted videos to external sheets (Google and Notion)   | Every 30 mins  | 100 |
 | Processing | Processes extracted and externalized videos to generate audio and transcription files  | Every 1 Hour  | 10 |
 | Updation | Updates extracted, externalized and processed videos to set the latest video metrics: comments, views and likes  | Every 30 mins  | 100 |

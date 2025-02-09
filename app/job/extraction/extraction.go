@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/khaledhikmat/yt-extractor/service"
 	"github.com/khaledhikmat/yt-extractor/service/audio"
 	"github.com/khaledhikmat/yt-extractor/service/config"
 	"github.com/khaledhikmat/yt-extractor/service/data"
@@ -55,7 +56,11 @@ func Processor(ctx context.Context,
 	}()
 
 	// Retrieve unextracted videos from Youtube
-	videos, err = datasvc.RetrieveUnextractedVideos(channelID, pageSize)
+	if job.Type == data.JobTypeErroredExtraction {
+		videos, err = datasvc.RetrieveErroredVideos(channelID, pageSize)
+	} else {
+		videos, err = datasvc.RetrieveUnextractedVideos(channelID, pageSize)
+	}
 	if err != nil {
 		errorStream <- err
 		errors++
@@ -94,19 +99,25 @@ func Processor(ctx context.Context,
 			continue
 		}
 
-		// Store the local reference video to an external storage
-		url, err := storagesvc.NewFile(ctx, video.ChannelID, localReference, fmt.Sprintf("%s.mp4", video.VideoID))
-		if err != nil {
-			errorStream <- err
-			errors++
-			continue
+		var url string
+		if localReference != service.UnextractedVideoURL {
+			// Store the local reference video to an external storage
+			url, err = storagesvc.NewFile(ctx, video.ChannelID, localReference, fmt.Sprintf("%s.mp4", video.VideoID))
+			if err != nil {
+				errorStream <- err
+				errors++
+				continue
+			}
+		} else {
+			// If the video is not extracted, use the unextracted URL
+			url = localReference
 		}
 
 		// Update the video with the extraction URL
 		now := time.Now()
 		video.ExtractionURL = &url
 		video.ExtractedAt = &now
-		err = datasvc.UpdateVideo(&video, data.JobTypeExtraction)
+		err = datasvc.UpdateVideo(&video, job.Type)
 		if err != nil {
 			errorStream <- err
 			errors++
