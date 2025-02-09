@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -112,6 +113,39 @@ func main() {
 		}
 	}()
 
+	// Run the contineous extraction go routine
+	go func() {
+		fmt.Printf("Contineous extraction - %t %t\n", configSvc.IsContineousExtraction(), configSvc.IsPeriodicExtraction())
+		// Do contineous extraction requests if configured for contineous extraction only
+		if configSvc.IsPeriodicExtraction() || !configSvc.IsContineousExtraction() {
+			return
+		}
+
+		fmt.Println("Contineous extraction started....")
+
+		// Wait for 5 seconds before starting the contineous extraction
+		time.Sleep(5 * time.Second)
+
+		for {
+			select {
+			case <-canxCtx.Done():
+				lgr.Logger.Info(
+					"contineous extractor context cancelled",
+				)
+				return
+			default:
+				job := data.Job{
+					ChannelID: configSvc.GetExtractionChannelID(),
+					Type:      data.JobTypeExtraction,
+				}
+				_, err = http.ProcessJob(canxCtx, job, 10, false, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc)
+				if err != nil {
+					errorStream <- err
+				}
+			}
+		}
+	}()
+
 	// Wait for cancellation, completion or error
 	for {
 		select {
@@ -121,16 +155,20 @@ func main() {
 			)
 			goto resume
 		case <-time.After(time.Duration(configSvc.GetExtractionPeriod()) * time.Minute):
-			// Do periodic extraction requests if configured
-			if configSvc.IsPeriodicExtraction() {
-				job := data.Job{
-					ChannelID: configSvc.GetExtractionChannelID(),
-					Type:      data.JobTypeExtraction,
-				}
-				_, err = http.ProcessJob(canxCtx, job, 10, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc)
-				if err != nil {
-					errorStream <- err
-				}
+			// Do periodic extraction requests if configured for periodic extraction only
+			if !configSvc.IsPeriodicExtraction() || configSvc.IsContineousExtraction() {
+				return
+			}
+
+			fmt.Println("Periodic extraction started....")
+
+			job := data.Job{
+				ChannelID: configSvc.GetExtractionChannelID(),
+				Type:      data.JobTypeExtraction,
+			}
+			_, err = http.ProcessJob(canxCtx, job, 10, true, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc)
+			if err != nil {
+				errorStream <- err
 			}
 		case e := <-errorStream:
 			// Add error table to the database

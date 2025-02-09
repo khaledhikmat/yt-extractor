@@ -365,7 +365,7 @@ func apiRoutes(ctx context.Context,
 			pageSize = 50
 		}
 
-		id, err := ProcessJob(ctx, job, pageSize, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc)
+		id, err := ProcessJob(ctx, job, pageSize, true, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc)
 		if err != nil {
 			c.JSON(400, gin.H{
 				"message": fmt.Sprintf("process job produced %s", err.Error()),
@@ -520,6 +520,7 @@ func apiRoutes(ctx context.Context,
 func ProcessJob(ctx context.Context,
 	job data.Job,
 	pageSize int,
+	async bool,
 	errorStream chan error,
 	cfgsvc config.IService,
 	datasvc data.IService,
@@ -549,8 +550,13 @@ func ProcessJob(ctx context.Context,
 		return -1, fmt.Errorf("new job produced %s", err.Error())
 	}
 
-	// Start the job processor asynchronously
-	go proc(ctx, job.ChannelID, id, pageSize, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc)
+	if async {
+		// Start the job processor asynchronously
+		go proc(ctx, job.ChannelID, id, pageSize, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc)
+	} else {
+		// Start the job processor synchronously
+		proc(ctx, job.ChannelID, id, pageSize, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc)
+	}
 
 	return id, nil
 }

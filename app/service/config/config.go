@@ -40,6 +40,10 @@ func (svc *configService) IsParseCodecEnabled() bool {
 	return os.Getenv("PARSE_CODEC") == "true"
 }
 
+func (svc *configService) IsContineousExtraction() bool {
+	return os.Getenv("CONTINEOUS_EXTRACTION") == "true"
+}
+
 func (svc *configService) IsPeriodicExtraction() bool {
 	return os.Getenv("PERIODIC_EXTRACTION") == "true"
 }

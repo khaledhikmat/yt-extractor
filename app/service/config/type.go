@@ -7,6 +7,7 @@ type IService interface {
 	GetNeonDSN() string
 	IsOpenTelemetry() bool
 	IsParseCodecEnabled() bool
+	IsContineousExtraction() bool
 	IsPeriodicExtraction() bool
 	GetExtractionPeriod() int
 	GetExtractionChannelID() string
