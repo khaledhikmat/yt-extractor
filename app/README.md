@@ -28,29 +28,29 @@ go get -u github.com/google/uuid
 |----------------|-----|------------------|
 | YOUTUBE_API_KEY       | `youtube-api-key`  | Name of the microservice to appear in OTEL. |
 | NEON_DSN       | `neon-postgres-db`  | HTTP Server port. Required to expose API Endpoints. |
-| APP_NAME       | `none`  | Name of the microservice to appear in OTEL. |
+| APP_NAME       | `yt-extractor`  | Name of the microservice to appear in OTEL. |
 | API_PORT       | `8080`  | HTTP Server port. Required to expose API Endpoints. |
 | RUN_TIME_ENV  | `dev`  | Runetime env name.  |
 | PARSE_CODEC  | `false`  | Whether to parse codec or not.  |
 | CONTINEOUS_EXTRACTION | `false` | Whether to run a contineous extraction. Please see note below.|
 | PERIODIC_EXTRACTION | `true` | Whether to run a periodic extraction |
-| EXTRACTION_PERIOD | 15 | Number of minutes for extraction interval |
-| EXTRACTION_CHANNEL_ID | `yt_channel_id` | Youtune channel ID to use for the periodic extraction |
-| LOCAL_CODEC_FOLDER  | `codecs`  | folder  |
-| LOCAL_VIDEOS_FOLDER  | `videos`  | folder  |
-| LOCAL_AUDIO_FOLDER | `audio` | folder |
+| EXTRACTION_PERIOD | 5 | Number of minutes for extraction interval |
+| EXTRACTION_CHANNEL_ID | `UCP-PfkMcOKriSxFMH7pTxfA` | Youtune channel ID to use for the periodic extraction |
+| LOCAL_CODEC_FOLDER  | `codecs`  | folder to store intermediate codec files  |
+| LOCAL_VIDEOS_FOLDER  | `videos`  | folder to store intermediate video files |
+| LOCAL_AUDIO_FOLDER | `audio` | folder to store intermediate audio files|
 | VIDEO_TRANSCRIPTION_CUTOFF_DATE | `2025-01-01 00:00:00` | Denotes the video transcription cutoff date |
-| STORAGE_PROVIDER | `s3` | |
-| STORAGE_BUCKET | `yt-extractor-videos` | |
-| STORAGE_REGION | `us-east-2` | |
-| AWS_ACCESS_KEY_ID | `aws-access-key-id` | |
-| AWS_ACCESS_SECRET_KEY_ID | `aws-access-secret-key-id` | |
+| STORAGE_PROVIDER | `s3` | Bucket storage for video, audio and transcription files |
+| STORAGE_BUCKET | `yt-extractor` | Bucket name |
+| STORAGE_REGION | `us-east-2` | Storage AWS region |
+| AWS_ACCESS_KEY_ID | `aws-access-key-id` | AWS creds |
+| AWS_ACCESS_SECRET_KEY_ID | `aws-access-secret-key-id` | AWS  creds |
 | OPEN_TELEMETRY     | `false`  | If `true`, it disables collecting OTEL telemetry signals.   |
 | OTEL_EXPORTER_OTLP_ENDPOINT     | `http://localhost:4318`  | OTEL endpoint.   |
 | OTEL_SERVICE_NAME     | `yt-extractor-backend`  | OTEL application name.   |
 | OTEL_GO_X_EXEMPLAR     | `true`  | OTEL GO.   |
 
-**Please note** that, needless to mention, running the application in `CONTINEOUS_EXTRACTION` mode requires dedication as it is pretty intensive.
+**Please note** that running the application in `CONTINEOUS_EXTRACTION` mode requires resource dedication as it is pretty intensive. In other words, `CONTINEOUS_EXTRACTION` mode should only be engaged while running on local machine.
 
 ## Build and Push to Docker Hub
 
