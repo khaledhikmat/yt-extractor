@@ -32,6 +32,7 @@ go get -u github.com/google/uuid
 | API_PORT       | `8080`  | HTTP Server port. Required to expose API Endpoints. |
 | RUN_TIME_ENV  | `dev`  | Runetime env name.  |
 | PARSE_CODEC  | `false`  | Whether to parse codec or not.  |
+| CONTINEOUS_EXTRACTION | `false` | Whether to run a contineous extraction. Please see note below.|
 | PERIODIC_EXTRACTION | `true` | Whether to run a periodic extraction |
 | EXTRACTION_PERIOD | 15 | Number of minutes for extraction interval |
 | EXTRACTION_CHANNEL_ID | `yt_channel_id` | Youtune channel ID to use for the periodic extraction |
@@ -46,6 +47,8 @@ go get -u github.com/google/uuid
 | OTEL_EXPORTER_OTLP_ENDPOINT     | `http://localhost:4318`  | OTEL endpoint.   |
 | OTEL_SERVICE_NAME     | `yt-extractor-backend`  | OTEL application name.   |
 | OTEL_GO_X_EXEMPLAR     | `true`  | OTEL GO.   |
+
+**Please note** that, needless to mention, running the application in `CONTINEOUS_EXTRACTION` mode requires dedication as it is pretty intensive.
 
 ## Build and Push to Docker Hub
 

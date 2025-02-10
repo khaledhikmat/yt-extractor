@@ -527,6 +527,7 @@ func ProcessJob(ctx context.Context,
 	ytsvc youtube.IService,
 	audiosvc audio.IService,
 	storagesvc storage.IService) (int64, error) {
+	fmt.Printf("Processing job %s for channel %s\n", job.Type, job.ChannelID)
 	// Validate there is a processor for the job type
 	proc, ok := jobProcs[job.Type]
 	if !ok {

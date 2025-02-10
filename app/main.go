@@ -157,7 +157,7 @@ func main() {
 		case <-time.After(time.Duration(configSvc.GetExtractionPeriod()) * time.Minute):
 			// Do periodic extraction requests if configured for periodic extraction only
 			if !configSvc.IsPeriodicExtraction() || configSvc.IsContineousExtraction() {
-				return
+				break
 			}
 
 			fmt.Println("Periodic extraction started....")
