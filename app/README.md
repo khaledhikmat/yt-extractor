@@ -36,8 +36,10 @@ go get -u github.com/google/uuid
 | PERIODIC_EXTRACTION | `true` | Whether to run a periodic extraction |
 | EXTRACTION_PERIOD | 15 | Number of minutes for extraction interval |
 | EXTRACTION_CHANNEL_ID | `yt_channel_id` | Youtune channel ID to use for the periodic extraction |
-| LOCAL_CODEC_FOLDER  | `codecs`  | folder.  |
-| LOCAL_VIDEOS_FOLDER  | `videos`  | folder.  |
+| LOCAL_CODEC_FOLDER  | `codecs`  | folder  |
+| LOCAL_VIDEOS_FOLDER  | `videos`  | folder  |
+| LOCAL_AUDIO_FOLDER | `audio` | folder |
+| VIDEO_TRANSCRIPTION_CUTOFF_DATE | `2025-01-01 00:00:00` | Denotes the video transcription cutoff date |
 | STORAGE_PROVIDER | `s3` | |
 | STORAGE_BUCKET | `yt-extractor-videos` | |
 | STORAGE_REGION | `us-east-2` | |

@@ -69,6 +69,14 @@ func (svc *configService) GetLocalVideosFolder() string {
 	return os.Getenv("LOCAL_VIDEOS_FOLDER")
 }
 
+func (svc *configService) GetLocalAudioFolder() string {
+	return os.Getenv("LOCAL_AUDIO_FOLDER")
+}
+
+func (svc *configService) GetVideoTranscriptionCutoffDate() string {
+	return os.Getenv("VIDEO_TRANSCRIPTION_CUTOFF_DATE")
+}
+
 func (svc *configService) GetStorageProvider() string {
 	return os.Getenv("STORAGE_PROVIDER")
 }

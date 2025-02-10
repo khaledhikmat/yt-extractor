@@ -41,7 +41,7 @@ func (svc *audioService) SplitAudio(URL string) ([]string, error) {
 	}
 
 	// Collect the generated file names
-	pattern := fmt.Sprintf("./audio/%s_*.mp3", jobID)
+	pattern := fmt.Sprintf("./%s/%s_*.mp3", svc.ConfigSvc.GetLocalAudioFolder(), jobID)
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		return files, fmt.Errorf("error collecting generated files: %v", err)
