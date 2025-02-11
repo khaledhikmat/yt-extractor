@@ -1,5 +1,5 @@
 package service
 
 const (
-	UnextractedVideoURL = "not-available-extraction-url"
+	UnextractedVideoURL = "https://www.isitdownrightnow.com"
 )

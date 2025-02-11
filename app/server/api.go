@@ -1,4 +1,4 @@
-package http
+package server
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/khaledhikmat/yt-extractor/service/audio"
+	"github.com/khaledhikmat/yt-extractor/service/cloudconvert"
 	"github.com/khaledhikmat/yt-extractor/service/config"
 	"github.com/khaledhikmat/yt-extractor/service/data"
 	"github.com/khaledhikmat/yt-extractor/service/storage"
@@ -16,6 +17,7 @@ import (
 	"github.com/khaledhikmat/yt-extractor/job"
 	jobattributes "github.com/khaledhikmat/yt-extractor/job/attributes"
 	jobextraction "github.com/khaledhikmat/yt-extractor/job/extraction"
+	jobtranscription "github.com/khaledhikmat/yt-extractor/job/transcription"
 )
 
 const (
@@ -26,6 +28,7 @@ var jobProcs = map[data.JobType]job.Processor{
 	data.JobTypeAttributes:        jobattributes.Processor,
 	data.JobTypeExtraction:        jobextraction.Processor,
 	data.JobTypeErroredExtraction: jobextraction.Processor,
+	data.JobTypeTranscription:     jobtranscription.Processor,
 }
 
 func apiRoutes(ctx context.Context,
@@ -35,7 +38,8 @@ func apiRoutes(ctx context.Context,
 	datasvc data.IService,
 	ytsvc youtube.IService,
 	audiosvc audio.IService,
-	storagesvc storage.IService) {
+	storagesvc storage.IService,
+	cloudconvertsvc cloudconvert.IService) {
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -44,10 +48,10 @@ func apiRoutes(ctx context.Context,
 	})
 
 	r.POST("/admins/reset", func(c *gin.Context) {
-		isPermitted := isPermitted(c, datasvc)
-		if !isPermitted {
+		_ = isPermitted(c, datasvc)
+		if 1 == 1 {
 			c.JSON(403, gin.H{
-				"message": "Invalid or missing API key",
+				"message": "Invalid or missing API key or not alllowed",
 			})
 			return
 		}
@@ -291,6 +295,41 @@ func apiRoutes(ctx context.Context,
 		})
 	})
 
+	r.GET("/videos/untranscribed", func(c *gin.Context) {
+		isPermitted := isPermitted(c, datasvc)
+		if !isPermitted {
+			c.JSON(403, gin.H{
+				"message": "Invalid or missing API key",
+			})
+			return
+		}
+
+		channelID := c.Query("c")
+		if channelID == "" {
+			c.JSON(400, gin.H{
+				"message": "channel ID is required",
+			})
+			return
+		}
+
+		pageSize, e := strconv.Atoi(c.Query("s"))
+		if e != nil {
+			pageSize = 50
+		}
+
+		videos, err := datasvc.RetrieveUntranscribedVideos(channelID, pageSize)
+		if err != nil {
+			c.JSON(400, gin.H{
+				"message": fmt.Sprintf("retrieve untranscribed videos produced %s", err.Error()),
+			})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"data": videos,
+		})
+	})
+
 	r.GET("/jobs", func(c *gin.Context) {
 		isPermitted := isPermitted(c, datasvc)
 		if !isPermitted {
@@ -365,7 +404,7 @@ func apiRoutes(ctx context.Context,
 			pageSize = 50
 		}
 
-		id, err := ProcessJob(ctx, job, pageSize, true, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc)
+		id, err := ProcessJob(ctx, job, pageSize, true, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc, cloudconvertsvc)
 		if err != nil {
 			c.JSON(400, gin.H{
 				"message": fmt.Sprintf("process job produced %s", err.Error()),
@@ -526,7 +565,8 @@ func ProcessJob(ctx context.Context,
 	datasvc data.IService,
 	ytsvc youtube.IService,
 	audiosvc audio.IService,
-	storagesvc storage.IService) (int64, error) {
+	storagesvc storage.IService,
+	cloudconvertsvc cloudconvert.IService) (int64, error) {
 	fmt.Printf("Processing job %s for channel %s\n", job.Type, job.ChannelID)
 	// Validate there is a processor for the job type
 	proc, ok := jobProcs[job.Type]
@@ -553,10 +593,10 @@ func ProcessJob(ctx context.Context,
 
 	if async {
 		// Start the job processor asynchronously
-		go proc(ctx, job.ChannelID, id, pageSize, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc)
+		go proc(ctx, job.ChannelID, id, pageSize, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc, cloudconvertsvc)
 	} else {
 		// Start the job processor synchronously
-		proc(ctx, job.ChannelID, id, pageSize, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc)
+		proc(ctx, job.ChannelID, id, pageSize, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc, cloudconvertsvc)
 	}
 
 	return id, nil

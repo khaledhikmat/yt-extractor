@@ -20,8 +20,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
 
-	"github.com/khaledhikmat/yt-extractor/http"
+	"github.com/khaledhikmat/yt-extractor/server"
 	"github.com/khaledhikmat/yt-extractor/service/audio"
+	"github.com/khaledhikmat/yt-extractor/service/cloudconvert"
 	"github.com/khaledhikmat/yt-extractor/service/config"
 	"github.com/khaledhikmat/yt-extractor/service/data"
 	"github.com/khaledhikmat/yt-extractor/service/lgr"
@@ -78,6 +79,7 @@ func main() {
 	youtubeSvc := youtube.New(configSvc)
 	audioSvc := audio.New(configSvc)
 	storageSvc := storage.New(configSvc)
+	cloudConvertSvc := cloudconvert.New(configSvc)
 
 	// Setup OpenTelemetry
 	shutdown, err := setupOpenTelemetry(rootCtx, configSvc)
@@ -107,7 +109,7 @@ func main() {
 
 	// Run the http server
 	go func() {
-		err = http.Run(canxCtx, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc)
+		err = server.Run(canxCtx, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc, cloudConvertSvc)
 		if err != nil {
 			errorStream <- err
 		}
@@ -138,7 +140,7 @@ func main() {
 					ChannelID: configSvc.GetExtractionChannelID(),
 					Type:      data.JobTypeExtraction,
 				}
-				_, err = http.ProcessJob(canxCtx, job, 10, false, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc)
+				_, err = server.ProcessJob(canxCtx, job, 10, false, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc, cloudConvertSvc)
 				if err != nil {
 					errorStream <- err
 				}
@@ -166,7 +168,7 @@ func main() {
 				ChannelID: configSvc.GetExtractionChannelID(),
 				Type:      data.JobTypeExtraction,
 			}
-			_, err = http.ProcessJob(canxCtx, job, 10, true, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc)
+			_, err = server.ProcessJob(canxCtx, job, 10, true, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc, cloudConvertSvc)
 			if err != nil {
 				errorStream <- err
 			}

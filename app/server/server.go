@@ -1,4 +1,4 @@
-package http
+package server
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/khaledhikmat/yt-extractor/service/audio"
+	"github.com/khaledhikmat/yt-extractor/service/cloudconvert"
 	"github.com/khaledhikmat/yt-extractor/service/config"
 	"github.com/khaledhikmat/yt-extractor/service/data"
 	"github.com/khaledhikmat/yt-extractor/service/lgr"
@@ -48,7 +49,8 @@ func Run(canxCtx context.Context,
 	datasvc data.IService,
 	ytsvc youtube.IService,
 	audiosvc audio.IService,
-	storagesvc storage.IService) error {
+	storagesvc storage.IService,
+	cloudconvertsvc cloudconvert.IService) error {
 	// Setup the Gin router
 	r := gin.Default()
 	cfg := cors.DefaultConfig()
@@ -64,7 +66,7 @@ func Run(canxCtx context.Context,
 	// TODO: Add routes
 
 	// Setup API routes
-	apiRoutes(canxCtx, r, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc)
+	apiRoutes(canxCtx, r, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc, cloudconvertsvc)
 
 	fn := getRunWithCanxFn(r, ":"+cfgsvc.GetAPIPort())
 	return fn(canxCtx, errorStream)

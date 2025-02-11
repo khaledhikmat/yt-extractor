@@ -32,6 +32,9 @@ var updateytextractionSQL string
 //go:embed sql/updatevideo_yterroredextraction.sql
 var updateyterroredextractionSQL string
 
+//go:embed sql/updatevideo_yttranscription.sql
+var updateyttranscriptionSQL string
+
 //go:embed sql/updatevideo_ytprocessing.sql
 var updateytprocessingSQL string
 
@@ -139,6 +142,8 @@ func (svc *dataService) UpdateVideo(video *Video, jobType JobType) error {
 		_, err = svc.Db.Exec(updateyterroredextractionSQL, video.ExtractionURL, video.ID)
 	} else if jobType == JobTypeProcessing {
 		_, err = svc.Db.Exec(updateytprocessingSQL, video.ID)
+	} else if jobType == JobTypeTranscription {
+		_, err = svc.Db.Exec(updateyttranscriptionSQL, video.AudioURL, video.TranscribedURL, video.ID)
 	} else {
 		return fmt.Errorf("Invalid job type %s", jobType)
 	}
@@ -321,6 +326,35 @@ func (svc *dataService) RetrieveUnexternalizedVideos(channelID string, max int) 
 	return videos, nil
 }
 
+// Used for transcription within the backend
+func (svc *dataService) RetrieveUntranscribedVideos(channelID string, max int) ([]Video, error) {
+	videos := []Video{}
+	err := svc.dbConnection()
+	if err != nil {
+		return videos, err
+	}
+
+	// Prevent unprocessed query to pick up errored extractions
+	query := fmt.Sprintf(`
+        SELECT * FROM videos 
+		WHERE channel_id = $1 
+		AND externalized_at is not null 
+		AND extracted_at is not null 
+		AND extraction_url != '%s' 
+		AND processed_at is null 
+		ORDER BY published_at DESC 
+		LIMIT $2 
+    `, service.UnextractedVideoURL)
+
+	err = svc.Db.Select(&videos, query, channelID, max)
+	if err != nil {
+		return videos, err
+	}
+
+	return videos, nil
+}
+
+// Used for transcription within the external automation tool
 func (svc *dataService) RetrieveUnprocessedVideos(channelID string, max int) ([]Video, error) {
 	videos := []Video{}
 	err := svc.dbConnection()

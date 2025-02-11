@@ -10,6 +10,7 @@ type IService interface {
 	RetrieveUnextractedVideos(channelID string, max int) ([]Video, error)
 	RetrieveErroredVideos(channelID string, max int) ([]Video, error)
 	RetrieveUnexternalizedVideos(channelID string, max int) ([]Video, error)
+	RetrieveUntranscribedVideos(channelID string, max int) ([]Video, error)
 	RetrieveUnprocessedVideos(channelID string, max int) ([]Video, error)
 	RetrieveUpdatedVideos(channelID string, max int) ([]Video, error)
 

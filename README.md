@@ -75,6 +75,7 @@ Currently the deployment is manual. But the following are some improvements:
 - ~~Video Summary in Arabic and English is no longer needed.~~
 - ~~Video ID `E8yRq75_yBo` is being converted by the Cloud Convert to `E8yRq75yBo`!!!! This is solved by using CloudConvert file name instead of the video ID.~~
 - ~~Make.com automations must use both Google Sheets and Notion.~~
+- Move transcription to the backend. [Make.com](https://us2.make.com) is a really nice platform but it can be cost prohibitive especially when the data transfer (i.e. egress) becomes big. Since transcription of MP4 files involve sending/downloading large files to/from CloudConvert and OpenAI, it is probably easier to run transcription locally on the backend. 
 
 ## Automations
 
@@ -82,12 +83,12 @@ These automations require a Youtube channel ID to operarte on and an API Key:
 
 | Automation      | Description                       | Interval | Size |
 |-----------------|-----------------------------------|----------|------|
-| Pull            | Request yt videos be pulled from Youtube using API  | Every 24 hrs | 50 |
-| Extract         | Request unextracted yt videos be extracted into S3   | Every 6 Hours | 10 |
-| Re-attempt Extract | Request errored extractions be re-attempted   | Every 6 Hours | 10 |
-| Externalization | Export extracted videos to external sheets (Google and Notion)   | Every 15 mins  | 100 |
-| Processing | Processes extracted and externalized videos to generate audio and transcription files  | Every 1 Hour  | 10 |
-| Updation | Updates extracted, externalized and processed videos to set the latest video metrics: comments, views and likes  | Every 30 mins  | 100 |
+| Pull            | Request yt videos be pulled from Youtube using API  | Daily at 6:00 AM | 50 |
+| Extract         | Request unextracted yt videos be extracted into S3   | Daily at 7:00 AM | 10 |
+| Re-attempt Extract | Request errored extractions be re-attempted   | Daily at 8:00 AM | 10 |
+| Externalization | Export extracted videos to external sheets (Google and Notion)   | Daily at 9:00 AM  | 100 |
+| Processing | Processes extracted and externalized videos to generate audio and transcription files  | Daily at 10:00 AM  | 10 |
+| Updation | Updates extracted, externalized and processed videos to set the latest video metrics: comments, views and likes  | Daily at 11:00 AM  | 100 |
 
 ### Make.com
 

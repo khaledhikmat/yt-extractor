@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/khaledhikmat/yt-extractor/service/audio"
+	"github.com/khaledhikmat/yt-extractor/service/cloudconvert"
 	"github.com/khaledhikmat/yt-extractor/service/config"
 	"github.com/khaledhikmat/yt-extractor/service/data"
 	"github.com/khaledhikmat/yt-extractor/service/storage"
@@ -20,4 +21,5 @@ type Processor func(ctx context.Context,
 	datasvc data.IService,
 	ytsvc youtube.IService,
 	audioSvc audio.IService,
-	storagesvc storage.IService)
+	storagesvc storage.IService,
+	cloudconvertsvc cloudconvert.IService)
