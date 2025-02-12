@@ -15,6 +15,7 @@ type IService interface {
 	GetLocalCodecsFolder() string
 	GetLocalVideosFolder() string
 	GetLocalAudioFolder() string
+	GetLocalTranscriptionFolder() string
 
 	GetVideoTranscriptionCutoffDate() string
 

@@ -12,6 +12,7 @@ import (
 	"github.com/khaledhikmat/yt-extractor/service/config"
 	"github.com/khaledhikmat/yt-extractor/service/data"
 	"github.com/khaledhikmat/yt-extractor/service/storage"
+	"github.com/khaledhikmat/yt-extractor/service/transcription"
 	"github.com/khaledhikmat/yt-extractor/service/youtube"
 
 	"github.com/khaledhikmat/yt-extractor/job"
@@ -39,7 +40,8 @@ func apiRoutes(ctx context.Context,
 	ytsvc youtube.IService,
 	audiosvc audio.IService,
 	storagesvc storage.IService,
-	cloudconvertsvc cloudconvert.IService) {
+	cloudconvertsvc cloudconvert.IService,
+	transcriptionsvc transcription.IService) {
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -404,7 +406,7 @@ func apiRoutes(ctx context.Context,
 			pageSize = 50
 		}
 
-		id, err := ProcessJob(ctx, job, pageSize, true, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc, cloudconvertsvc)
+		id, err := ProcessJob(ctx, job, pageSize, true, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc, cloudconvertsvc, transcriptionsvc)
 		if err != nil {
 			c.JSON(400, gin.H{
 				"message": fmt.Sprintf("process job produced %s", err.Error()),
@@ -566,7 +568,8 @@ func ProcessJob(ctx context.Context,
 	ytsvc youtube.IService,
 	audiosvc audio.IService,
 	storagesvc storage.IService,
-	cloudconvertsvc cloudconvert.IService) (int64, error) {
+	cloudconvertsvc cloudconvert.IService,
+	transcriptionsvc transcription.IService) (int64, error) {
 	fmt.Printf("Processing job %s for channel %s\n", job.Type, job.ChannelID)
 	// Validate there is a processor for the job type
 	proc, ok := jobProcs[job.Type]
@@ -593,10 +596,10 @@ func ProcessJob(ctx context.Context,
 
 	if async {
 		// Start the job processor asynchronously
-		go proc(ctx, job.ChannelID, id, pageSize, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc, cloudconvertsvc)
+		go proc(ctx, job.ChannelID, id, pageSize, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc, cloudconvertsvc, transcriptionsvc)
 	} else {
 		// Start the job processor synchronously
-		proc(ctx, job.ChannelID, id, pageSize, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc, cloudconvertsvc)
+		proc(ctx, job.ChannelID, id, pageSize, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc, cloudconvertsvc, transcriptionsvc)
 	}
 
 	return id, nil

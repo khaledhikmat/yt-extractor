@@ -14,6 +14,7 @@ import (
 	"github.com/khaledhikmat/yt-extractor/service/data"
 	"github.com/khaledhikmat/yt-extractor/service/lgr"
 	"github.com/khaledhikmat/yt-extractor/service/storage"
+	"github.com/khaledhikmat/yt-extractor/service/transcription"
 	"github.com/khaledhikmat/yt-extractor/service/youtube"
 	"github.com/mdobak/go-xerrors"
 	"go.opentelemetry.io/otel"
@@ -50,7 +51,8 @@ func Run(canxCtx context.Context,
 	ytsvc youtube.IService,
 	audiosvc audio.IService,
 	storagesvc storage.IService,
-	cloudconvertsvc cloudconvert.IService) error {
+	cloudconvertsvc cloudconvert.IService,
+	transcriptionsvc transcription.IService) error {
 	// Setup the Gin router
 	r := gin.Default()
 	cfg := cors.DefaultConfig()
@@ -66,7 +68,7 @@ func Run(canxCtx context.Context,
 	// TODO: Add routes
 
 	// Setup API routes
-	apiRoutes(canxCtx, r, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc, cloudconvertsvc)
+	apiRoutes(canxCtx, r, errorStream, cfgsvc, datasvc, ytsvc, audiosvc, storagesvc, cloudconvertsvc, transcriptionsvc)
 
 	fn := getRunWithCanxFn(r, ":"+cfgsvc.GetAPIPort())
 	return fn(canxCtx, errorStream)

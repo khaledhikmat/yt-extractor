@@ -342,9 +342,10 @@ func (svc *dataService) RetrieveUntranscribedVideos(channelID string, max int) (
 		AND extracted_at is not null 
 		AND extraction_url != '%s' 
 		AND processed_at is null 
+		AND published_at >= '%s'
 		ORDER BY published_at DESC 
 		LIMIT $2 
-    `, service.UnextractedVideoURL)
+    `, service.UnextractedVideoURL, svc.ConfigSvc.GetVideoTranscriptionCutoffDate())
 
 	err = svc.Db.Select(&videos, query, channelID, max)
 	if err != nil {

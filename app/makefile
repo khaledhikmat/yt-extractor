@@ -10,6 +10,7 @@ clean_dist:
 test:
 	echo "Invoking test cases..."
 	#go test ./service/cloudconvert -run TestConversion -v -count=1
+	#go test ./service/transcription -run TestTranscription -v -count=1
 
 build: clean_dist clean_build test
 	GOOS='linux' GOARCH='amd64' GO111MODULE='on' go build -o "${BUILD_DIR}/yt-extractor-app" .

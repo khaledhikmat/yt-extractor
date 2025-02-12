@@ -27,6 +27,7 @@ import (
 	"github.com/khaledhikmat/yt-extractor/service/data"
 	"github.com/khaledhikmat/yt-extractor/service/lgr"
 	"github.com/khaledhikmat/yt-extractor/service/storage"
+	"github.com/khaledhikmat/yt-extractor/service/transcription"
 	"github.com/khaledhikmat/yt-extractor/service/youtube"
 )
 
@@ -80,6 +81,7 @@ func main() {
 	audioSvc := audio.New(configSvc)
 	storageSvc := storage.New(configSvc)
 	cloudConvertSvc := cloudconvert.New(configSvc)
+	transcriptionSvc := transcription.New(configSvc)
 
 	// Setup OpenTelemetry
 	shutdown, err := setupOpenTelemetry(rootCtx, configSvc)
@@ -109,7 +111,7 @@ func main() {
 
 	// Run the http server
 	go func() {
-		err = server.Run(canxCtx, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc, cloudConvertSvc)
+		err = server.Run(canxCtx, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc, cloudConvertSvc, transcriptionSvc)
 		if err != nil {
 			errorStream <- err
 		}
@@ -140,7 +142,7 @@ func main() {
 					ChannelID: configSvc.GetExtractionChannelID(),
 					Type:      data.JobTypeExtraction,
 				}
-				_, err = server.ProcessJob(canxCtx, job, 10, false, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc, cloudConvertSvc)
+				_, err = server.ProcessJob(canxCtx, job, 10, false, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc, cloudConvertSvc, transcriptionSvc)
 				if err != nil {
 					errorStream <- err
 				}
@@ -168,7 +170,7 @@ func main() {
 				ChannelID: configSvc.GetExtractionChannelID(),
 				Type:      data.JobTypeExtraction,
 			}
-			_, err = server.ProcessJob(canxCtx, job, 10, true, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc, cloudConvertSvc)
+			_, err = server.ProcessJob(canxCtx, job, 10, true, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc, cloudConvertSvc, transcriptionSvc)
 			if err != nil {
 				errorStream <- err
 			}

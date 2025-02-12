@@ -10,6 +10,7 @@ import (
 	"github.com/khaledhikmat/yt-extractor/service/config"
 	"github.com/khaledhikmat/yt-extractor/service/data"
 	"github.com/khaledhikmat/yt-extractor/service/storage"
+	"github.com/khaledhikmat/yt-extractor/service/transcription"
 	"github.com/khaledhikmat/yt-extractor/service/youtube"
 	"github.com/khaledhikmat/yt-extractor/utils"
 )
@@ -24,7 +25,8 @@ func Processor(ctx context.Context,
 	ytsvc youtube.IService,
 	_ audio.IService,
 	_ storage.IService,
-	_ cloudconvert.IService) {
+	_ cloudconvert.IService,
+	_ transcription.IService) {
 
 	// Update job state to running
 	job, err := datasvc.RetrieveJobByID(jobID)
