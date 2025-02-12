@@ -356,6 +356,7 @@ func (svc *dataService) RetrieveUntranscribedVideos(channelID string, max int) (
 }
 
 // Used for transcription within the external automation tool
+// Abandoned
 func (svc *dataService) RetrieveUnprocessedVideos(channelID string, max int) ([]Video, error) {
 	videos := []Video{}
 	err := svc.dbConnection()
@@ -398,7 +399,6 @@ func (svc *dataService) RetrieveUpdatedVideos(channelID string, max int) ([]Vide
 		AND extracted_at is not null 
 		AND externalized_at is not null 
 		AND processed_at is not null 
-		AND updated_at > processed_at
 		AND updated_at >= NOW() - INTERVAL '24 HOURS'
 		ORDER BY published_at DESC 
 		LIMIT $2 

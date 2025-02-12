@@ -88,13 +88,12 @@ These automations require a Youtube channel ID to operarte on and an API Key:
 
 | Automation      | Description                       | Interval | Size |
 |-----------------|-----------------------------------|----------|------|
-| Pull            | Request yt videos be pulled from Youtube using API  | Daily at 6:00 AM | 50 |
+| Pull            | Request yt videos be pulled from Youtube using API  | Daily at 6:00 AM | 100 |
 | Extract         | Request unextracted yt videos be extracted into S3   | Daily at 7:00 AM | 10 |
 | Re-attempt Extract | Request errored extractions be re-attempted   | Daily at 8:00 AM | 10 |
 | Transcribe | Request yt videos be transcribed   | Daily at 9:00 AM | 10 |
-| Externalization | Export extracted videos to external sheets (Google and Notion)   | Daily at 10:00 AM  | 100 |
-| Processing | Processes extracted and externalized videos to generate audio and transcription files  | Daily at 11:00 AM  | 10 |
-| Updation | Updates extracted, externalized and processed videos to set the latest video metrics: comments, views and likes  | Daily at 12:00 Noon  | 100 |
+| Externalization | Export extracted videos to external sheets (Google and Notion)   | Daily at 11:00 AM  | 100 |
+| Updation | Updates extracted, externalized and transcribed videos to set the latest video metrics: comments, views and likes in addition to the audio, transcription and extraction URLs  | Daily at 12:00 PM  | 100 |
 
 ### Make.com
 
