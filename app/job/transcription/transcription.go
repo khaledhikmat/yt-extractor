@@ -3,6 +3,7 @@ package jobtranscription
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/khaledhikmat/yt-extractor/service/cloudconvert"
 	"github.com/khaledhikmat/yt-extractor/service/config"
 	"github.com/khaledhikmat/yt-extractor/service/data"
+	"github.com/khaledhikmat/yt-extractor/service/lgr"
 	"github.com/khaledhikmat/yt-extractor/service/storage"
 	"github.com/khaledhikmat/yt-extractor/service/transcription"
 	"github.com/khaledhikmat/yt-extractor/service/youtube"
@@ -66,6 +68,11 @@ func Processor(ctx context.Context,
 		errors++
 	}
 
+	lgr.Logger.Debug("jobtranscription.Processor",
+		slog.String("event", "receivedVideos"),
+		slog.Int("videos", len(videos)),
+	)
+
 	// Update each videos with transcribed data
 	for _, video := range videos {
 		// If the context is cancelled, exit the loop
@@ -78,7 +85,12 @@ func Processor(ctx context.Context,
 		}
 
 		var audioURL string
-		var transcribedURL string
+		var transcriptionURL string
+
+		lgr.Logger.Debug("jobtranscription.Processor",
+			slog.String("event", "aboutToConvert"),
+			slog.String("videoId", video.VideoID),
+		)
 
 		// - Use CloudConvert service to convert MP4 (stored in S3) to MP3 (stored in S3)
 		audioURL, err = cloudconvertsvc.ConvertVideoToAudio(video.ChannelID, video.VideoID)
@@ -88,6 +100,11 @@ func Processor(ctx context.Context,
 			continue
 		}
 
+		lgr.Logger.Debug("jobtranscription.Processor",
+			slog.String("event", "aboutToSplit"),
+			slog.String("videoId", video.VideoID),
+		)
+
 		// Use the audio service to segment the audio into 10-min audio files using URL
 		localAudioFiles, err := audiosvc.SplitAudio(audioURL)
 		if err != nil {
@@ -95,6 +112,12 @@ func Processor(ctx context.Context,
 			errors++
 			continue
 		}
+
+		lgr.Logger.Debug("jobtranscription.Processor",
+			slog.String("event", "aboutToTranscribe"),
+			slog.String("videoId", video.VideoID),
+			slog.Int("audioFiles", len(localAudioFiles)),
+		)
 
 		// Use the transcription service to transcribe the segmented audio files
 		var transcribedText string
@@ -107,8 +130,20 @@ func Processor(ctx context.Context,
 				errors++
 				continue
 			}
+
+			lgr.Logger.Debug("jobtranscription.Processor",
+				slog.String("event", "completedIndividualTranscription"),
+				slog.String("videoId", video.VideoID),
+				slog.String("audioFile", file),
+			)
+
 			transcribedText += txt
 		}
+
+		lgr.Logger.Debug("jobtranscription.Processor",
+			slog.String("event", "savingToLocalFile"),
+			slog.String("videoId", video.VideoID),
+		)
 
 		// Save transcribed text in a file
 		localTextFile, err := saveToFile(transcribedText, cfgsvc.GetLocalTranscriptionFolder(), fmt.Sprintf("%s.txt", video.VideoID))
@@ -118,18 +153,30 @@ func Processor(ctx context.Context,
 			continue
 		}
 
+		lgr.Logger.Debug("jobtranscription.Processor",
+			slog.String("event", "uploadingToS3"),
+			slog.String("videoId", video.VideoID),
+		)
+
 		// Upload to S3 and delete local text file
-		transcribedURL, err = storagesvc.NewFile(ctx, video.ChannelID, localTextFile, video.VideoID)
+		transcriptionURL, err = storagesvc.NewFile(ctx, video.ChannelID, localTextFile, fmt.Sprintf("%s.txt", video.VideoID))
 		if err != nil {
 			errorStream <- err
 			errors++
 			continue
 		}
 
+		lgr.Logger.Debug("jobtranscription.Processor",
+			slog.String("event", "updatingDb"),
+			slog.String("videoId", video.VideoID),
+			slog.String("audioUrl", audioURL),
+			slog.String("transcriptionUrl", transcriptionURL),
+		)
+
 		// Update the video with audio and transcription URLs
 		now := time.Now()
 		video.AudioURL = &audioURL
-		video.TranscribedURL = &transcribedURL
+		video.TranscriptionURL = &transcriptionURL
 		video.ProcessedAt = &now
 		err = datasvc.UpdateVideo(&video, job.Type)
 		if err != nil {
@@ -138,6 +185,10 @@ func Processor(ctx context.Context,
 			continue
 		}
 	}
+
+	lgr.Logger.Debug("jobtranscription.Processor",
+		slog.String("event", "done"),
+	)
 }
 
 func saveToFile(text, folder, fileName string) (string, error) {

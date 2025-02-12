@@ -3,24 +3,24 @@ package data
 import "time"
 
 type Video struct {
-	ID             int64      `json:"id" db:"id"`
-	ChannelID      string     `json:"channelId" db:"channel_id"`
-	VideoID        string     `json:"videoId" db:"video_id"`
-	VideoURL       string     `json:"videoUrl" db:"video_url"`
-	Title          string     `json:"title" db:"title"`
-	PublishedAt    time.Time  `json:"publishedAt" db:"published_at"`
-	Views          int64      `json:"views" db:"views"`
-	Comments       int64      `json:"comments" db:"comments"`
-	Likes          int64      `json:"likes" db:"likes"`
-	Duration       int64      `json:"duration" db:"duration"`
-	Short          bool       `json:"short" db:"short"`
-	UpdatedAt      time.Time  `json:"updatedAt" db:"updated_at"`
-	ExtractionURL  *string    `json:"extractionUrl" db:"extraction_url"`
-	ExtractedAt    *time.Time `json:"extractedAt" db:"extracted_at"`
-	ExternalizedAt *time.Time `json:"externalizedAt" db:"externalized_at"`
-	ProcessedAt    *time.Time `json:"processedAt" db:"processed_at"`
-	AudioURL       *string    `json:"audioUrl" db:"audio_url"`
-	TranscribedURL *string    `json:"transcribedUrl" db:"transcribed_url"`
+	ID               int64      `json:"id" db:"id"`
+	ChannelID        string     `json:"channelId" db:"channel_id"`
+	VideoID          string     `json:"videoId" db:"video_id"`
+	VideoURL         string     `json:"videoUrl" db:"video_url"`
+	Title            string     `json:"title" db:"title"`
+	PublishedAt      time.Time  `json:"publishedAt" db:"published_at"`
+	Views            int64      `json:"views" db:"views"`
+	Comments         int64      `json:"comments" db:"comments"`
+	Likes            int64      `json:"likes" db:"likes"`
+	Duration         int64      `json:"duration" db:"duration"`
+	Short            bool       `json:"short" db:"short"`
+	UpdatedAt        time.Time  `json:"updatedAt" db:"updated_at"`
+	ExtractionURL    *string    `json:"extractionUrl" db:"extraction_url"`
+	ExtractedAt      *time.Time `json:"extractedAt" db:"extracted_at"`
+	ExternalizedAt   *time.Time `json:"externalizedAt" db:"externalized_at"`
+	ProcessedAt      *time.Time `json:"processedAt" db:"processed_at"`
+	AudioURL         *string    `json:"audioUrl" db:"audio_url"`
+	TranscriptionURL *string    `json:"transcriptionUrl" db:"transcription_url"`
 }
 
 type JobState string

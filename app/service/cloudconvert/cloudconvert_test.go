@@ -2,6 +2,8 @@ package cloudconvert
 
 import (
 	"testing"
+
+	"github.com/khaledhikmat/yt-extractor/service/config"
 )
 
 // WARNIMNG: Requires that env vars be set:
@@ -12,8 +14,9 @@ import (
 // CLOUDCONVERT_API_KEY
 
 func TestConversion(t *testing.T) {
-	svc := New(nil)
-	s3URL, err := svc.ConvertVideoToAudio("UCP-PfkMcOKriSxFMH7pTxfA", "0hiQBvg5OmY")
+	configSvc := config.New()
+	svc := New(configSvc)
+	s3URL, err := svc.ConvertVideoToAudio("UCP-PfkMcOKriSxFMH7pTxfA", "02o2vrpOogc")
 	if err != nil {
 		t.Error(err)
 	}

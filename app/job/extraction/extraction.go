@@ -3,6 +3,7 @@ package jobextraction
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/khaledhikmat/yt-extractor/service"
@@ -10,6 +11,7 @@ import (
 	"github.com/khaledhikmat/yt-extractor/service/cloudconvert"
 	"github.com/khaledhikmat/yt-extractor/service/config"
 	"github.com/khaledhikmat/yt-extractor/service/data"
+	"github.com/khaledhikmat/yt-extractor/service/lgr"
 	"github.com/khaledhikmat/yt-extractor/service/storage"
 	"github.com/khaledhikmat/yt-extractor/service/transcription"
 	"github.com/khaledhikmat/yt-extractor/service/youtube"
@@ -128,4 +130,8 @@ func Processor(ctx context.Context,
 			continue
 		}
 	}
+
+	lgr.Logger.Debug("jobextraction.Processor",
+		slog.String("event", "done"),
+	)
 }

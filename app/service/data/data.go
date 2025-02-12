@@ -140,10 +140,10 @@ func (svc *dataService) UpdateVideo(video *Video, jobType JobType) error {
 		_, err = svc.Db.Exec(updateytextractionSQL, video.ExtractionURL, video.ID)
 	} else if jobType == JobTypeErroredExtraction {
 		_, err = svc.Db.Exec(updateyterroredextractionSQL, video.ExtractionURL, video.ID)
+	} else if jobType == JobTypeTranscription {
+		_, err = svc.Db.Exec(updateyttranscriptionSQL, video.AudioURL, video.TranscriptionURL, video.ID)
 	} else if jobType == JobTypeProcessing {
 		_, err = svc.Db.Exec(updateytprocessingSQL, video.ID)
-	} else if jobType == JobTypeTranscription {
-		_, err = svc.Db.Exec(updateyttranscriptionSQL, video.AudioURL, video.TranscribedURL, video.ID)
 	} else {
 		return fmt.Errorf("Invalid job type %s", jobType)
 	}

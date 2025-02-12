@@ -27,3 +27,4 @@ dist-ssr
 **/.dapr
 .terraform
 sample*
+dumps*

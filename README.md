@@ -46,6 +46,11 @@ Currently the deployment is manual. But the following are some improvements:
 - Make use of branches
 - Install CLI
 - Automate using API
+- Backup the database:
+
+```bash
+pg_dump -h ep-crimson-feather-a5n37o2g-pooler.us-east-2.aws.neon.tech -U neondb_owner -d neondb -F c -f ./dba/dumps/backup_$(date +"%Y-%m-%d").dump
+```
 
 ### Railway
 
@@ -86,9 +91,10 @@ These automations require a Youtube channel ID to operarte on and an API Key:
 | Pull            | Request yt videos be pulled from Youtube using API  | Daily at 6:00 AM | 50 |
 | Extract         | Request unextracted yt videos be extracted into S3   | Daily at 7:00 AM | 10 |
 | Re-attempt Extract | Request errored extractions be re-attempted   | Daily at 8:00 AM | 10 |
-| Externalization | Export extracted videos to external sheets (Google and Notion)   | Daily at 9:00 AM  | 100 |
-| Processing | Processes extracted and externalized videos to generate audio and transcription files  | Daily at 10:00 AM  | 10 |
-| Updation | Updates extracted, externalized and processed videos to set the latest video metrics: comments, views and likes  | Daily at 11:00 AM  | 100 |
+| Transcribe | Request yt videos be transcribed   | Daily at 9:00 AM | 10 |
+| Externalization | Export extracted videos to external sheets (Google and Notion)   | Daily at 10:00 AM  | 100 |
+| Processing | Processes extracted and externalized videos to generate audio and transcription files  | Daily at 11:00 AM  | 10 |
+| Updation | Updates extracted, externalized and processed videos to set the latest video metrics: comments, views and likes  | Daily at 12:00 Noon  | 100 |
 
 ### Make.com
 

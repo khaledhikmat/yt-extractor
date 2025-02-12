@@ -24,14 +24,6 @@ func (svc *configService) GetAPIPort() string {
 	return os.Getenv("API_PORT")
 }
 
-func (svc *configService) GetYoutubeAPIKey() string {
-	return os.Getenv("YOUTUBE_API_KEY")
-}
-
-func (svc *configService) GetNeonDSN() string {
-	return os.Getenv("NEON_DSN")
-}
-
 func (svc *configService) IsOpenTelemetry() bool {
 	return os.Getenv("OPEN_TELEMETRY") == "true"
 }
@@ -81,6 +73,10 @@ func (svc *configService) GetVideoTranscriptionCutoffDate() string {
 	return os.Getenv("VIDEO_TRANSCRIPTION_CUTOFF_DATE")
 }
 
+func (svc *configService) GetTranscriptionProvider() string {
+	return os.Getenv("TRANSCRIPTION_PROVIDER")
+}
+
 func (svc *configService) GetStorageProvider() string {
 	return os.Getenv("STORAGE_PROVIDER")
 }
@@ -91,6 +87,34 @@ func (svc *configService) GetStorageBucket() string {
 
 func (svc *configService) GetStorageRegion() string {
 	return os.Getenv("STORAGE_REGION")
+}
+
+func (svc *configService) GetAWSAccessKeyID() string {
+	return os.Getenv("AWS_ACCESS_KEY_ID")
+}
+
+func (svc *configService) GetAWSSecretAccessKey() string {
+	return os.Getenv("AWS_SECRET_ACCESS_KEY")
+}
+
+func (svc *configService) GetAWSRegion() string {
+	return os.Getenv("AWS_REGION")
+}
+
+func (svc *configService) GetYoutubeAPIKey() string {
+	return os.Getenv("YOUTUBE_API_KEY")
+}
+
+func (svc *configService) GetNeonDSN() string {
+	return os.Getenv("NEON_DSN")
+}
+
+func (svc *configService) GetOpenAIKey() string {
+	return os.Getenv("OPENAI_API_KEY")
+}
+
+func (svc *configService) GetCloudConvertKey() string {
+	return os.Getenv("CLOUDCONVERT_API_KEY")
 }
 
 func (svc *configService) Finalize() {

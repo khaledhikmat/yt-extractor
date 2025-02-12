@@ -30,7 +30,7 @@ func (svc *audioService) SplitAudio(URL string) ([]string, error) {
 	jobID := uuid.New().String()
 
 	// Split audio into 10 minute segments
-	outputPattern := fmt.Sprintf("./audio/%s_%%03d.mp3", jobID)
+	outputPattern := fmt.Sprintf("./%s/%s_%%03d.mp3", svc.ConfigSvc.GetLocalAudioFolder(), jobID)
 	cmd := exec.Command("ffmpeg", "-i", URL, "-f", "segment", "-segment_time", "600", "-c", "copy", outputPattern)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
