@@ -62,8 +62,8 @@ func Processor(ctx context.Context,
 	}()
 
 	// Retrieve unextracted videos from Youtube
-	if job.Type == data.JobTypeErroredExtraction {
-		videos, err = datasvc.RetrieveErroredVideos(channelID, pageSize)
+	if job.Type == data.JobTypeExtractionError {
+		videos, err = datasvc.RetrieveExtractErroredVideos(channelID, pageSize)
 	} else {
 		videos, err = datasvc.RetrieveUnextractedVideos(channelID, pageSize)
 	}
@@ -90,6 +90,8 @@ func Processor(ctx context.Context,
 	}
 
 	// Update videos with extracted data
+	// WARNING: Any error causes the extraction URL to be set to invalid
+	// This means that extraction will re-attempted
 	for _, video := range videos {
 		// If the context is cancelled, exit the loop
 		// But execute the defer block first
@@ -100,38 +102,51 @@ func Processor(ctx context.Context,
 		default:
 		}
 
+		var extractionURL string
+
 		localReference, ok := results[video.VideoURL]
 		if !ok {
+			errorStream <- fmt.Errorf("video %s not found in extraction results", video.VideoURL)
+			errors++
+			extractionURL = service.InvalidURL
+			updateDb(datasvc, errorStream, &video, &job, &extractionURL)
 			continue
 		}
 
-		var url string
-		if localReference != service.UnextractedVideoURL {
+		if localReference != service.InvalidURL {
 			// Store the local reference video to an external storage
-			url, err = storagesvc.NewFile(ctx, video.ChannelID, localReference, fmt.Sprintf("%s.mp4", video.VideoID))
+			extractionURL, err = storagesvc.NewFile(ctx, video.ChannelID, localReference, fmt.Sprintf("%s.mp4", video.VideoID))
 			if err != nil {
 				errorStream <- err
 				errors++
+				extractionURL = service.InvalidURL
+				updateDb(datasvc, errorStream, &video, &job, &extractionURL)
 				continue
 			}
 		} else {
 			// If the video is not extracted, use the unextracted URL
-			url = localReference
+			extractionURL = localReference
 		}
 
-		// Update the video with the extraction URL
-		now := time.Now()
-		video.ExtractionURL = &url
-		video.ExtractedAt = &now
-		err = datasvc.UpdateVideo(&video, job.Type)
-		if err != nil {
-			errorStream <- err
-			errors++
-			continue
-		}
+		// WARNING: We need to store the unextracted URL to prevent cyclic extraction on the same video
+		// It might be tempting to not store anything, but we need to prevent cyclic extraction
+
+		// Update the video with the extraction URL if successful
+		updateDb(datasvc, errorStream, &video, &job, &extractionURL)
 	}
 
 	lgr.Logger.Debug("jobextraction.Processor",
 		slog.String("event", "done"),
 	)
+}
+
+func updateDb(datasvc data.IService, errorStream chan error, video *data.Video, job *data.Job, url *string) {
+	// Update the video with transcription URL
+	now := time.Now()
+	video.ExtractionURL = url
+	video.ExtractedAt = &now
+	err := datasvc.UpdateVideo(video, job.Type)
+	if err != nil {
+		errorStream <- err
+	}
 }

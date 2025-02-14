@@ -1,5 +1,5 @@
 package service
 
 const (
-	UnextractedVideoURL = "https://www.isitdownrightnow.com"
+	InvalidURL = "https://www.isitdownrightnow.com"
 )

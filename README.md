@@ -25,8 +25,7 @@ The following tools are used in this project:
 | Tool            | Description                       | Fee |
 |-----------------|-----------------------------------|----------|
 | [Make.com](https://us2.make.com) | Automation Platform | $9 Monthly for 10,000 ops |
-| [Railway](https://railway.com/) | App Deployment Platform | $5 Monthly for 8 GB/8 vCPU |
-| [Neon](https://console.neon.tech/app/projects) | Postgres Platform | Free Tier |
+| [Railway](https://railway.com/) | App Deployment Platform: App + Postgres Database | $5 Monthly for 8 GB/8 vCPU |
 | [OpenAI](https://platform.openai.com/) | AI Platform | Pay-as-you go - Auto-Recharge enabled to maintain $20 balance |
 | [CloudConvert](https://cloudconvert.com) | File Conversion Platform | Pay-as-you-go - Auto-Recharge enabled $9 for 500 conversions |
 | [Notion](https://notion.com) | Wiki, Databases, Sites, etc Platform | $10 Monthly |
@@ -49,13 +48,32 @@ Currently the deployment is manual. But the following are some improvements:
 - Backup the database:
 
 ```bash
-pg_dump -h ep-crimson-feather-a5n37o2g-pooler.us-east-2.aws.neon.tech -U neondb_owner -d neondb -F c -f ./dba/dumps/backup_$(date +"%Y-%m-%d").dump
+pg_dump -h ep-crimson-feather-a5n37o2g-pooler.us-east-2.aws.neon.tech -U neondb_owner -d neondb -F c -f ./dba/dumps/neon_backup_$(date +"%Y-%m-%d").dump
+```
+
+```bash
+pg_dump -h ep-crimson-feather-a5n37o2g-pooler.us-east-2.aws.neon.tech -U neondb_owner -d neondb -F p -f ./dba/dumps/neon_backup_$(date +"%Y-%m-%d").sql
 ```
 
 ### Railway
 
 - Install CLI
 - Automate Deployment using API
+- Export the database:
+
+```bash
+pg_dump -h monorail.proxy.rlwy.net -p 11397 -U postgres -d railway -F c -f ./dba/dumps/railway_backup_$(date +"%Y-%m-%d").dump
+```
+
+- Import the database:
+
+```bash
+pg_restore --host=monorail.proxy.rlwy.net --port=11397 --username=postgres --dbname=railway --format=c ./dba/dumps/backup_2025-02-13.dump
+```
+
+```bash
+psql --host=monorail.proxy.rlwy.net --port=11397 --username=postgres --dbname=railway -f ./dba/dumps/backup_2025-02-13.sql
+```
 
 ### Make.com
 
@@ -80,7 +98,12 @@ pg_dump -h ep-crimson-feather-a5n37o2g-pooler.us-east-2.aws.neon.tech -U neondb_
 - ~~Video Summary in Arabic and English is no longer needed.~~
 - ~~Video ID `E8yRq75_yBo` is being converted by the Cloud Convert to `E8yRq75yBo`!!!! This is solved by using CloudConvert file name instead of the video ID.~~
 - ~~Make.com automations must use both Google Sheets and Notion.~~
-- Move transcription to the backend. [Make.com](https://us2.make.com) is a really nice platform but it can be cost prohibitive especially when the data transfer (i.e. egress) becomes big. Since transcription of MP4 files involve sending/downloading large files to/from CloudConvert and OpenAI, it is probably easier to run transcription locally on the backend. 
+- ~~Move transcription to the backend. [Make.com](https://us2.make.com) is a really nice platform but it can be cost prohibitive especially when the data transfer (i.e. egress) becomes big. Since transcription of MP4 files involve sending/downloading large files to/from CloudConvert and OpenAI, it is probably easier to run transcription locally on the backend.~~
+- ~~Considered AWS S3 Auto-Transcription but dismissed it due to cost.~~
+- ~~OpenAI does not aupport async calling where results are rendered via webhook.~~
+- Not sure how to mitigate the job running risk
+- Consider using webhook for CloudConvert PROD and polling for DEV. 
+- Automation risk where if insert/update fails to external databases. We may insert another time.  
 
 ## Automations
 
@@ -91,9 +114,16 @@ These automations require a Youtube channel ID to operarte on and an API Key:
 | Pull            | Request yt videos be pulled from Youtube using API  | Daily at 6:00 AM | 100 |
 | Extract         | Request unextracted yt videos be extracted into S3   | Daily at 7:00 AM | 10 |
 | Re-attempt Extract | Request errored extractions be re-attempted   | Daily at 8:00 AM | 10 |
-| Transcribe | Request yt videos be transcribed   | Daily at 9:00 AM | 10 |
-| Externalization | Export extracted videos to external sheets (Google and Notion)   | Daily at 11:00 AM  | 100 |
-| Updation | Updates extracted, externalized and transcribed videos to set the latest video metrics: comments, views and likes in addition to the audio, transcription and extraction URLs  | Daily at 12:00 PM  | 100 |
+| Audio | Request yt videos be audioed   | Daily at 9:00 AM | 10 |
+| Re-attempt Audio | Request errored audios be re-attempted   | Daily at 10:00 AM | 10 |
+| Transcribe | Request yt videos be transcribed   | Daily at 11:00 AM | 10 |
+| Re-attempt Transcribe | Request errored transcriptions be re-attempted   | Daily at 12:00 PM | 10 |
+| Externalization | Export extracted videos to external sheets (Google and Notion)   | Daily at 1:00 PM  | 100 |
+| Updation | Updates any updated records in the last 24 hrs to set the latest video metrics: comments, views and likes in addition to the audio, transcription and extraction URLs  | Daily at 2:00 PM  | 100 |
+
+### Pipeline
+
+Pull -> Extract -> Externalize -> Audio -> Transcribe
 
 ### Make.com
 

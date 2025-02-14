@@ -18,9 +18,10 @@ type Video struct {
 	ExtractionURL    *string    `json:"extractionUrl" db:"extraction_url"`
 	ExtractedAt      *time.Time `json:"extractedAt" db:"extracted_at"`
 	ExternalizedAt   *time.Time `json:"externalizedAt" db:"externalized_at"`
-	ProcessedAt      *time.Time `json:"processedAt" db:"processed_at"`
 	AudioURL         *string    `json:"audioUrl" db:"audio_url"`
+	AudioedAt        *time.Time `json:"audioedAt" db:"audioed_at"`
 	TranscriptionURL *string    `json:"transcriptionUrl" db:"transcription_url"`
+	TranscribedAt    *time.Time `json:"transcribedAt" db:"transcribed_at"`
 }
 
 type JobState string
@@ -35,12 +36,14 @@ const (
 type JobType string
 
 const (
-	JobTypeAttributes        JobType = "attributes"
-	JobTypeExtraction        JobType = "extraction"
-	JobTypeErroredExtraction JobType = "erroredextraction"
-	JobTypeExternalization   JobType = "externalization"
-	JobTypeTranscription     JobType = "transcription"
-	JobTypeProcessing        JobType = "processing"
+	JobTypeAttributes         JobType = "attributes"
+	JobTypeExtraction         JobType = "extraction"
+	JobTypeExtractionError    JobType = "extractionerror"
+	JobTypeExternalization    JobType = "externalization"
+	JobTypeAudio              JobType = "audio"
+	JobTypeAudioError         JobType = "audioerror"
+	JobTypeTranscription      JobType = "transcription"
+	JobTypeTranscriptionError JobType = "transcriptionerror"
 )
 
 type Job struct {

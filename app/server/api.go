@@ -17,6 +17,7 @@ import (
 
 	"github.com/khaledhikmat/yt-extractor/job"
 	jobattributes "github.com/khaledhikmat/yt-extractor/job/attributes"
+	jobaudio "github.com/khaledhikmat/yt-extractor/job/audio"
 	jobextraction "github.com/khaledhikmat/yt-extractor/job/extraction"
 	jobtranscription "github.com/khaledhikmat/yt-extractor/job/transcription"
 )
@@ -26,10 +27,13 @@ const (
 )
 
 var jobProcs = map[data.JobType]job.Processor{
-	data.JobTypeAttributes:        jobattributes.Processor,
-	data.JobTypeExtraction:        jobextraction.Processor,
-	data.JobTypeErroredExtraction: jobextraction.Processor,
-	data.JobTypeTranscription:     jobtranscription.Processor,
+	data.JobTypeAttributes:         jobattributes.Processor,
+	data.JobTypeExtraction:         jobextraction.Processor,
+	data.JobTypeExtractionError:    jobextraction.Processor,
+	data.JobTypeAudio:              jobaudio.Processor,
+	data.JobTypeAudioError:         jobaudio.Processor,
+	data.JobTypeTranscription:      jobtranscription.Processor,
+	data.JobTypeTranscriptionError: jobtranscription.Processor,
 }
 
 func apiRoutes(ctx context.Context,
@@ -157,7 +161,7 @@ func apiRoutes(ctx context.Context,
 		})
 	})
 
-	r.GET("/videos/errored", func(c *gin.Context) {
+	r.GET("/videos/extracterrored", func(c *gin.Context) {
 		isPermitted := isPermitted(c, datasvc)
 		if !isPermitted {
 			c.JSON(403, gin.H{
@@ -179,10 +183,10 @@ func apiRoutes(ctx context.Context,
 			pageSize = 50
 		}
 
-		videos, err := datasvc.RetrieveErroredVideos(channelID, pageSize)
+		videos, err := datasvc.RetrieveExtractErroredVideos(channelID, pageSize)
 		if err != nil {
 			c.JSON(400, gin.H{
-				"message": fmt.Sprintf("retrieve errored videos produced %s", err.Error()),
+				"message": fmt.Sprintf("retrieve extract errored videos produced %s", err.Error()),
 			})
 			return
 		}
@@ -227,7 +231,7 @@ func apiRoutes(ctx context.Context,
 		})
 	})
 
-	r.GET("/videos/updated", func(c *gin.Context) {
+	r.GET("/videos/unaudioed", func(c *gin.Context) {
 		isPermitted := isPermitted(c, datasvc)
 		if !isPermitted {
 			c.JSON(403, gin.H{
@@ -249,10 +253,10 @@ func apiRoutes(ctx context.Context,
 			pageSize = 50
 		}
 
-		videos, err := datasvc.RetrieveUpdatedVideos(channelID, pageSize)
+		videos, err := datasvc.RetrieveUnaudioedVideos(channelID, pageSize)
 		if err != nil {
 			c.JSON(400, gin.H{
-				"message": fmt.Sprintf("retrieve updated videos produced %s", err.Error()),
+				"message": fmt.Sprintf("retrieve unaudioed videos produced %s", err.Error()),
 			})
 			return
 		}
@@ -262,7 +266,7 @@ func apiRoutes(ctx context.Context,
 		})
 	})
 
-	r.GET("/videos/unprocessed", func(c *gin.Context) {
+	r.GET("/videos/audioerrored", func(c *gin.Context) {
 		isPermitted := isPermitted(c, datasvc)
 		if !isPermitted {
 			c.JSON(403, gin.H{
@@ -284,10 +288,10 @@ func apiRoutes(ctx context.Context,
 			pageSize = 50
 		}
 
-		videos, err := datasvc.RetrieveUnprocessedVideos(channelID, pageSize)
+		videos, err := datasvc.RetrieveAudioErroredVideos(channelID, pageSize)
 		if err != nil {
 			c.JSON(400, gin.H{
-				"message": fmt.Sprintf("retrieve unprocessed videos produced %s", err.Error()),
+				"message": fmt.Sprintf("retrieve audio errored videos produced %s", err.Error()),
 			})
 			return
 		}
@@ -323,6 +327,76 @@ func apiRoutes(ctx context.Context,
 		if err != nil {
 			c.JSON(400, gin.H{
 				"message": fmt.Sprintf("retrieve untranscribed videos produced %s", err.Error()),
+			})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"data": videos,
+		})
+	})
+
+	r.GET("/videos/transcribeerrored", func(c *gin.Context) {
+		isPermitted := isPermitted(c, datasvc)
+		if !isPermitted {
+			c.JSON(403, gin.H{
+				"message": "Invalid or missing API key",
+			})
+			return
+		}
+
+		channelID := c.Query("c")
+		if channelID == "" {
+			c.JSON(400, gin.H{
+				"message": "channel ID is required",
+			})
+			return
+		}
+
+		pageSize, e := strconv.Atoi(c.Query("s"))
+		if e != nil {
+			pageSize = 50
+		}
+
+		videos, err := datasvc.RetrieveTranscribeErroredVideos(channelID, pageSize)
+		if err != nil {
+			c.JSON(400, gin.H{
+				"message": fmt.Sprintf("retrieve transcribe errored videos produced %s", err.Error()),
+			})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"data": videos,
+		})
+	})
+
+	r.GET("/videos/updated", func(c *gin.Context) {
+		isPermitted := isPermitted(c, datasvc)
+		if !isPermitted {
+			c.JSON(403, gin.H{
+				"message": "Invalid or missing API key",
+			})
+			return
+		}
+
+		channelID := c.Query("c")
+		if channelID == "" {
+			c.JSON(400, gin.H{
+				"message": "channel ID is required",
+			})
+			return
+		}
+
+		pageSize, e := strconv.Atoi(c.Query("s"))
+		if e != nil {
+			pageSize = 50
+		}
+
+		videos, err := datasvc.RetrieveUpdatedVideos(channelID, pageSize)
+		if err != nil {
+			c.JSON(400, gin.H{
+				"message": fmt.Sprintf("retrieve updated videos produced %s", err.Error()),
 			})
 			return
 		}
@@ -436,7 +510,7 @@ func apiRoutes(ctx context.Context,
 			return
 		}
 
-		updateType := c.Query("t")
+		// The only thing we allow clients to update is to set the externalization
 		video, err := datasvc.RetrieveVideoByID(int64(id))
 		if err != nil {
 			c.JSON(400, gin.H{
@@ -445,13 +519,7 @@ func apiRoutes(ctx context.Context,
 			return
 		}
 
-		// Set the job type based on the update type
-		jobType := data.JobTypeExternalization
-		if updateType == "processing" {
-			jobType = data.JobTypeProcessing
-		}
-
-		err = datasvc.UpdateVideo(&video, jobType)
+		err = datasvc.UpdateVideo(&video, data.JobTypeExternalization)
 		if err != nil {
 			c.JSON(400, gin.H{
 				"message": fmt.Sprintf("Updating video %d caused error: %s", id, err.Error()),

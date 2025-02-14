@@ -29,14 +29,11 @@ var updateytexternalizationSQL string
 //go:embed sql/updatevideo_ytextraction.sql
 var updateytextractionSQL string
 
-//go:embed sql/updatevideo_yterroredextraction.sql
-var updateyterroredextractionSQL string
+//go:embed sql/updatevideo_ytaudio.sql
+var updateytaudioSQL string
 
 //go:embed sql/updatevideo_yttranscription.sql
 var updateyttranscriptionSQL string
-
-//go:embed sql/updatevideo_ytprocessing.sql
-var updateytprocessingSQL string
 
 //go:embed sql/insertjob.sql
 var insertjobSQL string
@@ -138,12 +135,16 @@ func (svc *dataService) UpdateVideo(video *Video, jobType JobType) error {
 		_, err = svc.Db.Exec(updateytexternalizationSQL, video.ID)
 	} else if jobType == JobTypeExtraction {
 		_, err = svc.Db.Exec(updateytextractionSQL, video.ExtractionURL, video.ID)
-	} else if jobType == JobTypeErroredExtraction {
-		_, err = svc.Db.Exec(updateyterroredextractionSQL, video.ExtractionURL, video.ID)
+	} else if jobType == JobTypeExtractionError {
+		_, err = svc.Db.Exec(updateytextractionSQL, video.ExtractionURL, video.ID)
+	} else if jobType == JobTypeAudio {
+		_, err = svc.Db.Exec(updateytaudioSQL, video.AudioURL, video.ID)
+	} else if jobType == JobTypeAudioError {
+		_, err = svc.Db.Exec(updateytaudioSQL, video.AudioURL, video.ID)
 	} else if jobType == JobTypeTranscription {
-		_, err = svc.Db.Exec(updateyttranscriptionSQL, video.AudioURL, video.TranscriptionURL, video.ID)
-	} else if jobType == JobTypeProcessing {
-		_, err = svc.Db.Exec(updateytprocessingSQL, video.ID)
+		_, err = svc.Db.Exec(updateyttranscriptionSQL, video.TranscriptionURL, video.ID)
+	} else if jobType == JobTypeTranscriptionError {
+		_, err = svc.Db.Exec(updateyttranscriptionSQL, video.TranscriptionURL, video.ID)
 	} else {
 		return fmt.Errorf("Invalid job type %s", jobType)
 	}
@@ -274,16 +275,16 @@ func (svc *dataService) RetrieveUnextractedVideos(channelID string, max int) ([]
 	return videos, nil
 }
 
-func (svc *dataService) RetrieveErroredVideos(channelID string, max int) ([]Video, error) {
+func (svc *dataService) RetrieveExtractErroredVideos(channelID string, max int) ([]Video, error) {
 	videos := []Video{}
 	err := svc.dbConnection()
 	if err != nil {
 		return videos, err
 	}
 
-	// The errored videos have not-available extraction-URL
+	// The errored videos have invalid extraction URL
 	// and it has not been more than 24 hours since the extraction.
-	// The last clause is to prevent the errored videos from being picked up perpetually.
+	// The last clause is to prevent the errored videos from being picked up perpetually (i.e. cyclic extraction).
 	query := `
         SELECT * FROM videos 
 		WHERE channel_id = $1 
@@ -294,7 +295,7 @@ func (svc *dataService) RetrieveErroredVideos(channelID string, max int) ([]Vide
 		LIMIT $3 
     `
 
-	err = svc.Db.Select(&videos, query, channelID, service.UnextractedVideoURL, max)
+	err = svc.Db.Select(&videos, query, channelID, service.InvalidURL, max)
 	if err != nil {
 		return videos, err
 	}
@@ -327,7 +328,7 @@ func (svc *dataService) RetrieveUnexternalizedVideos(channelID string, max int) 
 }
 
 // Used for transcription within the backend
-func (svc *dataService) RetrieveUntranscribedVideos(channelID string, max int) ([]Video, error) {
+func (svc *dataService) RetrieveUnaudioedVideos(channelID string, max int) ([]Video, error) {
 	videos := []Video{}
 	err := svc.dbConnection()
 	if err != nil {
@@ -341,11 +342,11 @@ func (svc *dataService) RetrieveUntranscribedVideos(channelID string, max int) (
 		AND externalized_at is not null 
 		AND extracted_at is not null 
 		AND extraction_url != '%s' 
-		AND processed_at is null 
+		AND audioed_at is null 
 		AND published_at >= '%s'
 		ORDER BY published_at DESC 
 		LIMIT $2 
-    `, service.UnextractedVideoURL, svc.ConfigSvc.GetVideoTranscriptionCutoffDate())
+    `, service.InvalidURL, svc.ConfigSvc.GetVideoTranscriptionCutoffDate())
 
 	err = svc.Db.Select(&videos, query, channelID, max)
 	if err != nil {
@@ -355,30 +356,85 @@ func (svc *dataService) RetrieveUntranscribedVideos(channelID string, max int) (
 	return videos, nil
 }
 
-// Used for transcription within the external automation tool
-// Abandoned
-func (svc *dataService) RetrieveUnprocessedVideos(channelID string, max int) ([]Video, error) {
+func (svc *dataService) RetrieveAudioErroredVideos(channelID string, max int) ([]Video, error) {
 	videos := []Video{}
 	err := svc.dbConnection()
 	if err != nil {
 		return videos, err
 	}
 
-	// Prevent unprocessed query to pick up errored extractions
-	// Restrict transcription processing to cutoff datetime
+	// The errored videos have invalid audio URL
+	// and it has not been more than 24 hours since the audio conversion.
+	// The last clause is to prevent the errored videos from being picked up perpetually (i.e. cyclic extraction).
+	query := `
+        SELECT * FROM videos 
+		WHERE channel_id = $1 
+		AND audioed_at is not null 
+		AND audio_url = $2
+		AND audioed_at >= NOW() - INTERVAL '24 HOURS'
+		ORDER BY published_at DESC 
+		LIMIT $3 
+    `
+
+	err = svc.Db.Select(&videos, query, channelID, service.InvalidURL, max)
+	if err != nil {
+		return videos, err
+	}
+
+	return videos, nil
+}
+
+// Used for transcription within the backend
+func (svc *dataService) RetrieveUntranscribedVideos(channelID string, max int) ([]Video, error) {
+	videos := []Video{}
+	err := svc.dbConnection()
+	if err != nil {
+		return videos, err
+	}
+
 	query := fmt.Sprintf(`
         SELECT * FROM videos 
 		WHERE channel_id = $1 
 		AND externalized_at is not null 
 		AND extracted_at is not null 
 		AND extraction_url != '%s' 
-		AND processed_at is null 
+		AND audioed_at is not null 
+		AND audio_url != '%s' 
+		AND transcribed_at is null 
 		AND published_at >= '%s'
 		ORDER BY published_at DESC 
 		LIMIT $2 
-    `, service.UnextractedVideoURL, svc.ConfigSvc.GetVideoTranscriptionCutoffDate())
+    `, service.InvalidURL, service.InvalidURL, svc.ConfigSvc.GetVideoTranscriptionCutoffDate())
 
 	err = svc.Db.Select(&videos, query, channelID, max)
+	if err != nil {
+		return videos, err
+	}
+
+	return videos, nil
+}
+
+func (svc *dataService) RetrieveTranscribeErroredVideos(channelID string, max int) ([]Video, error) {
+	videos := []Video{}
+	err := svc.dbConnection()
+	if err != nil {
+		return videos, err
+	}
+
+	// The errored videos have invalid transcription URL
+	// and it has not been more than 24 hours since the transcription.
+	// The last clause is to prevent the errored videos from being picked up perpetually (i.e. cyclic extraction).
+	query := `
+        SELECT * FROM videos 
+		WHERE channel_id = $1 
+		AND transcribed_at is not null 
+		AND transcription_url = $2
+		AND transcribed_at >= NOW() - INTERVAL '24 HOURS'
+		ORDER BY published_at DESC 
+		LIMIT $3 
+    `
+
+	err = svc.Db.Select(&videos, query, channelID, service.InvalidURL, max)
 	if err != nil {
 		return videos, err
 	}
@@ -396,9 +452,7 @@ func (svc *dataService) RetrieveUpdatedVideos(channelID string, max int) ([]Vide
 	query := `
         SELECT * FROM videos 
 		WHERE channel_id = $1 
-		AND extracted_at is not null 
 		AND externalized_at is not null 
-		AND processed_at is not null 
 		AND updated_at >= NOW() - INTERVAL '24 HOURS'
 		ORDER BY published_at DESC 
 		LIMIT $2 
@@ -571,7 +625,7 @@ func (svc *dataService) dbConnection() error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	svc.Db, err = sqlx.Connect("postgres", svc.ConfigSvc.GetNeonDSN())
+	svc.Db, err = sqlx.Connect("postgres", svc.ConfigSvc.GetDbDSN())
 	if err != nil {
 		return err
 	}

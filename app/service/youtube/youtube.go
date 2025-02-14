@@ -95,7 +95,7 @@ func (svc *youtubService) ExtractVideos(ctx context.Context, errorStream chan er
 		if err != nil {
 			errorStream <- fmt.Errorf("error extracting video %s: %v", URL, err)
 			// Indicate an error by mapping the video URL to not available extraction URL
-			results[URL] = service.UnextractedVideoURL
+			results[URL] = service.InvalidURL
 			continue
 		}
 

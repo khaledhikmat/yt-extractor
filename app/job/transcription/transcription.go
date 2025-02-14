@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/khaledhikmat/yt-extractor/service"
 	"github.com/khaledhikmat/yt-extractor/service/audio"
 	"github.com/khaledhikmat/yt-extractor/service/cloudconvert"
 	"github.com/khaledhikmat/yt-extractor/service/config"
@@ -28,7 +29,7 @@ func Processor(ctx context.Context,
 	_ youtube.IService,
 	audiosvc audio.IService,
 	storagesvc storage.IService,
-	cloudconvertsvc cloudconvert.IService,
+	_ cloudconvert.IService,
 	transcriptionsvc transcription.IService) {
 	// Update job state to running
 	job, err := datasvc.RetrieveJobByID(jobID)
@@ -62,7 +63,12 @@ func Processor(ctx context.Context,
 	}()
 
 	// Retrieve untranscribed videos
-	videos, err = datasvc.RetrieveUntranscribedVideos(channelID, pageSize)
+	// Retrieve unaudioed videos from Youtube
+	if job.Type == data.JobTypeTranscriptionError {
+		videos, err = datasvc.RetrieveTranscribeErroredVideos(channelID, pageSize)
+	} else {
+		videos, err = datasvc.RetrieveUntranscribedVideos(channelID, pageSize)
+	}
 	if err != nil {
 		errorStream <- err
 		errors++
@@ -74,6 +80,8 @@ func Processor(ctx context.Context,
 	)
 
 	// Update each videos with transcribed data
+	// WARNING: Any error causes the transcription URL to be set to invalid
+	// This means that transcription will be re-attempted
 	for _, video := range videos {
 		// If the context is cancelled, exit the loop
 		// But execute the defer block first
@@ -84,32 +92,21 @@ func Processor(ctx context.Context,
 		default:
 		}
 
-		var audioURL string
 		var transcriptionURL string
-
-		lgr.Logger.Debug("jobtranscription.Processor",
-			slog.String("event", "aboutToConvert"),
-			slog.String("videoId", video.VideoID),
-		)
-
-		// - Use CloudConvert service to convert MP4 (stored in S3) to MP3 (stored in S3)
-		audioURL, err = cloudconvertsvc.ConvertVideoToAudio(video.ChannelID, video.VideoID)
-		if err != nil {
-			errorStream <- err
-			errors++
-			continue
-		}
 
 		lgr.Logger.Debug("jobtranscription.Processor",
 			slog.String("event", "aboutToSplit"),
 			slog.String("videoId", video.VideoID),
 		)
 
-		// Use the audio service to segment the audio into 10-min audio files using URL
-		localAudioFiles, err := audiosvc.SplitAudio(audioURL)
+		// Use the audio service to segment the audio into 10-min audio files
+		// using the video audio URL
+		localAudioFiles, err := audiosvc.SplitAudio(*video.AudioURL)
 		if err != nil {
 			errorStream <- err
 			errors++
+			transcriptionURL = service.InvalidURL
+			updateDb(datasvc, errorStream, &video, &job, &transcriptionURL)
 			continue
 		}
 
@@ -119,15 +116,26 @@ func Processor(ctx context.Context,
 			slog.Int("audioFiles", len(localAudioFiles)),
 		)
 
+		defer func() {
+			// Delete local audio files
+			for _, file := range localAudioFiles {
+				// Ignore errors because they may have been deleted already
+				_ = os.Remove(file)
+			}
+		}()
+
 		// Use the transcription service to transcribe the segmented audio files
 		var transcribedText string
 		// For each segmented audio file
 		for _, file := range localAudioFiles {
-			// Use the transcription service to get a transcribed text and delete local audio file
+			// Use the transcription service to get a transcribed text
+			// and delete local audio file
 			txt, err := transcriptionsvc.TranscribeAudio(file)
 			if err != nil {
 				errorStream <- err
 				errors++
+				transcriptionURL = service.InvalidURL
+				updateDb(datasvc, errorStream, &video, &job, &transcriptionURL)
 				continue
 			}
 
@@ -150,8 +158,16 @@ func Processor(ctx context.Context,
 		if err != nil {
 			errorStream <- err
 			errors++
+			transcriptionURL = service.InvalidURL
+			updateDb(datasvc, errorStream, &video, &job, &transcriptionURL)
 			continue
 		}
+
+		defer func() {
+			// Delete local text file
+			// Ignore errors because it may have been deleted already
+			_ = os.Remove(localTextFile)
+		}()
 
 		lgr.Logger.Debug("jobtranscription.Processor",
 			slog.String("event", "uploadingToS3"),
@@ -163,27 +179,20 @@ func Processor(ctx context.Context,
 		if err != nil {
 			errorStream <- err
 			errors++
+			transcriptionURL = service.InvalidURL
+			updateDb(datasvc, errorStream, &video, &job, &transcriptionURL)
 			continue
 		}
 
 		lgr.Logger.Debug("jobtranscription.Processor",
 			slog.String("event", "updatingDb"),
 			slog.String("videoId", video.VideoID),
-			slog.String("audioUrl", audioURL),
+			slog.String("audioUrl", *video.AudioURL),
 			slog.String("transcriptionUrl", transcriptionURL),
 		)
 
-		// Update the video with audio and transcription URLs
-		now := time.Now()
-		video.AudioURL = &audioURL
-		video.TranscriptionURL = &transcriptionURL
-		video.ProcessedAt = &now
-		err = datasvc.UpdateVideo(&video, job.Type)
-		if err != nil {
-			errorStream <- err
-			errors++
-			continue
-		}
+		// Update the video with transcription URL
+		updateDb(datasvc, errorStream, &video, &job, &transcriptionURL)
 	}
 
 	lgr.Logger.Debug("jobtranscription.Processor",
@@ -208,4 +217,15 @@ func saveToFile(text, folder, fileName string) (string, error) {
 	}
 
 	return filePath, nil
+}
+
+func updateDb(datasvc data.IService, errorStream chan error, video *data.Video, job *data.Job, url *string) {
+	// Update the video with transcription URL
+	now := time.Now()
+	video.TranscriptionURL = url
+	video.TranscribedAt = &now
+	err := datasvc.UpdateVideo(video, job.Type)
+	if err != nil {
+		errorStream <- err
+	}
 }

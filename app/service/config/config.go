@@ -105,8 +105,16 @@ func (svc *configService) GetYoutubeAPIKey() string {
 	return os.Getenv("YOUTUBE_API_KEY")
 }
 
+func (svc *configService) GetDbDSN() string {
+	return os.Getenv(os.Getenv("DB_DSN"))
+}
+
 func (svc *configService) GetNeonDSN() string {
 	return os.Getenv("NEON_DSN")
+}
+
+func (svc *configService) GetRailwayDSN() string {
+	return os.Getenv("RAILWAY_DSN")
 }
 
 func (svc *configService) GetOpenAIKey() string {

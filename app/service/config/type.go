@@ -27,7 +27,9 @@ type IService interface {
 	GetAWSSecretAccessKey() string
 	GetAWSRegion() string
 
+	GetDbDSN() string
 	GetNeonDSN() string
+	GetRailwayDSN() string
 	GetYoutubeAPIKey() string
 	GetOpenAIKey() string
 	GetCloudConvertKey() string

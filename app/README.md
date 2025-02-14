@@ -28,6 +28,7 @@ go get -u github.com/google/uuid
 |----------------|-----|------------------|
 | YOUTUBE_API_KEY       | `youtube-api-key`  | Name of the microservice to appear in OTEL. |
 | NEON_DSN       | `neon-postgres-db`  | HTTP Server port. Required to expose API Endpoints. |
+| RAILWAY_DSN       | `railway-postgres-db`  | HTTP Server port. Required to expose API Endpoints. |
 | APP_NAME       | `yt-extractor`  | Name of the microservice to appear in OTEL. |
 | API_PORT       | `8080`  | HTTP Server port. Required to expose API Endpoints. |
 | RUN_TIME_ENV  | `dev`  | Runetime env name.  |

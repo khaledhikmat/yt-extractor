@@ -129,11 +129,19 @@ func (svc *cloudConvertService) checkJobStatus(jobID, channelID, videoID string)
 			url := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", svc.ConfigSvc.GetStorageBucket(), svc.ConfigSvc.GetStorageRegion(), fmt.Sprintf("%s/%s.mp3", channelID, videoID))
 			return url, nil
 		} else if status == "failed" {
-			return "", fmt.Errorf("job failed, status: %s", status)
+			return "", fmt.Errorf("cloudconvert job failed, status: %s", status)
 		}
 
 		// Wait for 5 seconds before retrying
 		time.Sleep(5 * time.Second)
 		idx++
+
+		// Timeout after 180 attempts ~= 15 minutes
+		if idx > 120 {
+			lgr.Logger.Debug("checkJobStatus",
+				slog.String("timeout", "15 mins"),
+			)
+			return "", fmt.Errorf("cloudconvert job timedout after 15 minutes")
+		}
 	}
 }
