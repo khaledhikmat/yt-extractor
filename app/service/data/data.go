@@ -29,11 +29,20 @@ var updateytexternalizationSQL string
 //go:embed sql/updatevideo_ytextraction.sql
 var updateytextractionSQL string
 
+//go:embed sql/updatevideo_ytextraction_error.sql
+var updateytextractionerrorSQL string
+
 //go:embed sql/updatevideo_ytaudio.sql
 var updateytaudioSQL string
 
+//go:embed sql/updatevideo_ytaudio_error.sql
+var updateytaudioerrorSQL string
+
 //go:embed sql/updatevideo_yttranscription.sql
 var updateyttranscriptionSQL string
+
+//go:embed sql/updatevideo_yttranscription_error.sql
+var updateyttranscriptionerrorSQL string
 
 //go:embed sql/insertjob.sql
 var insertjobSQL string
@@ -136,15 +145,15 @@ func (svc *dataService) UpdateVideo(video *Video, jobType JobType) error {
 	} else if jobType == JobTypeExtraction {
 		_, err = svc.Db.Exec(updateytextractionSQL, video.ExtractionURL, video.ID)
 	} else if jobType == JobTypeExtractionError {
-		_, err = svc.Db.Exec(updateytextractionSQL, video.ExtractionURL, video.ID)
+		_, err = svc.Db.Exec(updateytextractionerrorSQL, video.ExtractionURL, video.ID)
 	} else if jobType == JobTypeAudio {
 		_, err = svc.Db.Exec(updateytaudioSQL, video.AudioURL, video.ID)
 	} else if jobType == JobTypeAudioError {
-		_, err = svc.Db.Exec(updateytaudioSQL, video.AudioURL, video.ID)
+		_, err = svc.Db.Exec(updateytaudioerrorSQL, video.AudioURL, video.ID)
 	} else if jobType == JobTypeTranscription {
 		_, err = svc.Db.Exec(updateyttranscriptionSQL, video.TranscriptionURL, video.ID)
 	} else if jobType == JobTypeTranscriptionError {
-		_, err = svc.Db.Exec(updateyttranscriptionSQL, video.TranscriptionURL, video.ID)
+		_, err = svc.Db.Exec(updateyttranscriptionerrorSQL, video.TranscriptionURL, video.ID)
 	} else {
 		return fmt.Errorf("Invalid job type %s", jobType)
 	}
@@ -283,14 +292,14 @@ func (svc *dataService) RetrieveExtractErroredVideos(channelID string, max int) 
 	}
 
 	// The errored videos have invalid extraction URL
-	// and it has not been more than 24 hours since the extraction.
+	// and it has not been more than 48 hours since the extraction.
 	// The last clause is to prevent the errored videos from being picked up perpetually (i.e. cyclic extraction).
 	query := `
         SELECT * FROM videos 
 		WHERE channel_id = $1 
 		AND extracted_at is not null 
 		AND extraction_url = $2
-		AND extracted_at >= NOW() - INTERVAL '24 HOURS'
+		AND extracted_at >= NOW() - INTERVAL '48 HOURS'
 		ORDER BY published_at DESC 
 		LIMIT $3 
     `
@@ -364,14 +373,14 @@ func (svc *dataService) RetrieveAudioErroredVideos(channelID string, max int) ([
 	}
 
 	// The errored videos have invalid audio URL
-	// and it has not been more than 24 hours since the audio conversion.
+	// and it has not been more than 48 hours since the audio conversion.
 	// The last clause is to prevent the errored videos from being picked up perpetually (i.e. cyclic extraction).
 	query := `
         SELECT * FROM videos 
 		WHERE channel_id = $1 
 		AND audioed_at is not null 
 		AND audio_url = $2
-		AND audioed_at >= NOW() - INTERVAL '24 HOURS'
+		AND audioed_at >= NOW() - INTERVAL '48 HOURS'
 		ORDER BY published_at DESC 
 		LIMIT $3 
     `
@@ -422,14 +431,14 @@ func (svc *dataService) RetrieveTranscribeErroredVideos(channelID string, max in
 	}
 
 	// The errored videos have invalid transcription URL
-	// and it has not been more than 24 hours since the transcription.
+	// and it has not been more than 48 hours since the transcription.
 	// The last clause is to prevent the errored videos from being picked up perpetually (i.e. cyclic extraction).
 	query := `
         SELECT * FROM videos 
 		WHERE channel_id = $1 
 		AND transcribed_at is not null 
 		AND transcription_url = $2
-		AND transcribed_at >= NOW() - INTERVAL '24 HOURS'
+		AND transcribed_at >= NOW() - INTERVAL '48 HOURS'
 		ORDER BY published_at DESC 
 		LIMIT $3 
     `
@@ -453,7 +462,7 @@ func (svc *dataService) RetrieveUpdatedVideos(channelID string, max int) ([]Vide
         SELECT * FROM videos 
 		WHERE channel_id = $1 
 		AND externalized_at is not null 
-		AND updated_at >= NOW() - INTERVAL '24 HOURS'
+		AND updated_at >= NOW() - INTERVAL '48 HOURS'
 		ORDER BY published_at DESC 
 		LIMIT $2 
     `

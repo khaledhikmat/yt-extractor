@@ -18,6 +18,7 @@ SELECT title, extraction_url, extracted_at, audio_url, audioed_at, transcription
 select * from jobs where state = 'running';
 --delete from jobs where state = 'running';
 select * from jobs where id = 590;
+select * from jobs ORDER BY STARTED_AT DESC LIMIT 10;
 select * from jobs where state = 'completed' ORDER BY started_at DESC LIMIT 10;
 select * from jobs ORDER BY started_at DESC LIMIT 10;
 select * from errors;
