@@ -13,6 +13,8 @@ select * from videos where video_url IN ('https://www.youtube.com/watch?v=aUSJG8
 select * from videos where extraction_url = 'https://www.isitdownrightnow.com';
 SELECT * from videos where published_at >= '2025-01-01 00:00:00' ORDER BY published_at DESC;
 SELECT title, extraction_url, extracted_at, audio_url, audioed_at, transcription_url, transcribed_at from videos WHERE id = 42;
+SELECT * from videos where externalized_at is null;
+select * from videos where id = 43;
 -- update videos SET extraction_url = 'https://www.isitdownrightnow.com' WHERE id = 1219 
 -- update videos SET processed_at = null, externalized_at = null;
 select * from jobs where state = 'running';
