@@ -91,7 +91,7 @@ func (svc *youtubService) ExtractVideos(ctx context.Context, errorStream chan er
 		)
 
 		// Run yt-dlp to extract the video and save it to an output file
-		mp4File, err := runYTDLPExtractor(extractVideoID(URL), URL, svc.ConfigSvc.GetLocalVideosFolder(), svc.ConfigSvc.GetLocalCodecsFolder())
+		mp4File, err := runYTDLPExtractor(extractVideoID(URL), URL, svc.ConfigSvc.GetLocalVideosFolder(), svc.ConfigSvc.GetLocalCodecsFolder(), svc.ConfigSvc.IsProduction())
 		if err != nil {
 			errorStream <- fmt.Errorf("error extracting video %s: %v", URL, err)
 			// Indicate an error by mapping the video URL to not available extraction URL
@@ -382,7 +382,7 @@ func runYTDLPWithOutput(videoURL, outputFile string) error {
 	return nil
 }
 
-func runYTDLPExtractor(videoID, videoURL, videosFolder, codecsFolder string) (string, error) {
+func runYTDLPExtractor(videoID, videoURL, videosFolder, codecsFolder string, isProd bool) (string, error) {
 	outputFile := fmt.Sprintf("./%s/%s.mp4", videosFolder, videoID)
 
 	// Two attempts to extract the video:
@@ -401,7 +401,16 @@ func runYTDLPExtractor(videoID, videoURL, videosFolder, codecsFolder string) (st
 		}
 
 		// Construct the extract command using default codec IDs
-		cmd := exec.Command("yt-dlp", "-f", codecIDs, "--merge-output-format", "mp4", videoURL, "-o", outputFile)
+		var cmd *exec.Cmd
+		if isProd {
+			// In production running in Docker, we must spoof headers and user agent to prevent
+			// triggering YouTube's anti-bot measures
+			// Try using a realistic browser User-Agent to make requests look more like a human browsing.
+			userAgent := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+			cmd = exec.Command("yt-dlp", "--user-agent", userAgent, "-f", codecIDs, "--merge-output-format", "mp4", videoURL, "-o", outputFile)
+		} else {
+			cmd = exec.Command("yt-dlp", "-f", codecIDs, "--merge-output-format", "mp4", videoURL, "-o", outputFile)
+		}
 
 		// Set command output to the standard output (for debugging/logging)
 		cmd.Stdout = os.Stdout

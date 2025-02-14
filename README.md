@@ -111,15 +111,15 @@ These automations require a Youtube channel ID to operarte on and an API Key:
 
 | Automation      | Description                       | Interval | Size |
 |-----------------|-----------------------------------|----------|------|
-| Pull            | Request yt videos be pulled from Youtube using API  | Daily at 6:00 AM Eastern| 100 |
-| Extract         | Request unextracted yt videos be extracted into S3   | Daily at 7:00 AM Eastern | 10 |
-| Re-attempt Extract | Request errored extractions be re-attempted   | Daily at 8:00 AM Eastern | 10 |
-| Audio | Request yt videos be audioed   | Daily at 9:00 AM Eastern | 10 |
-| Re-attempt Audio | Request errored audios be re-attempted   | Daily at 10:00 AM Eastern | 10 |
-| Transcribe | Request yt videos be transcribed   | Daily at 11:00 AM Eastern | 10 |
-| Re-attempt Transcribe | Request errored transcriptions be re-attempted   | Daily at 12:00 PM Eastern | 10 |
-| Externalization | Export extracted videos to external sheets (Google and Notion)   | Daily at 1:00 PM Eastern | 100 |
-| Updation | Updates any updated records in the last 24 hrs to set the latest video metrics: comments, views and likes in addition to the audio, transcription and extraction URLs  | Daily at 2:00 PM Eastern | 100 |
+| Pull            | Request yt videos be pulled from Youtube using API  | 6:00 AM EST Daily | 100 |
+| Extract         | Request unextracted yt videos be extracted into S3   | 7:00 EST Daily | 10 |
+| Re-attempt Extract | Request errored extractions be re-attempted   | 8:00 AM EST Daily | 10 |
+| Audio | Request yt videos be audioed   | 9:00 AM EST Daily | 10 |
+| Re-attempt Audio | Request errored audios be re-attempted   | 10:00 AM EST Daily | 10 |
+| Transcribe | Request yt videos be transcribed   | 11:00 AM EST Daily | 10 |
+| Re-attempt Transcribe | Request errored transcriptions be re-attempted   | 12:00 PM EST Daily | 10 |
+| Externalization | Export extracted videos to external sheets (Google and Notion)   | 1:00 PM EST Daily | 100 |
+| Updation | Updates any updated records in the last 24 hrs to set the latest video metrics: comments, views and likes in addition to the audio, transcription and extraction URLs  | 2:00 PM EST Daily | 100 |
 
 ### Pipeline
 

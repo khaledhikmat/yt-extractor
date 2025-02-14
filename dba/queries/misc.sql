@@ -21,6 +21,7 @@ select * from jobs where id = 590;
 select * from jobs ORDER BY STARTED_AT DESC LIMIT 10;
 select * from jobs where state = 'completed' ORDER BY started_at DESC LIMIT 10;
 select * from jobs ORDER BY started_at DESC LIMIT 10;
+-- delete from jobs where id < 592;
 select * from errors;
 -- delete from errors;
 

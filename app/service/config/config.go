@@ -20,6 +20,10 @@ func (svc *configService) GetRuntimeEnvironment() string {
 	return os.Getenv("RUN_TIME_ENV")
 }
 
+func (svc *configService) IsProduction() bool {
+	return svc.GetRuntimeEnvironment() == "prod"
+}
+
 func (svc *configService) GetAPIPort() string {
 	return os.Getenv("API_PORT")
 }
@@ -67,6 +71,22 @@ func (svc *configService) GetLocalAudioFolder() string {
 
 func (svc *configService) GetLocalTranscriptionFolder() string {
 	return os.Getenv("LOCAL_TRANSCRIPTION_FOLDER")
+}
+
+func (svc *configService) GetUpdatePeriod() string {
+	if os.Getenv("UPDATE_PERIOD") == "" {
+		return "48 HOURS"
+	}
+
+	return os.Getenv("UPDATE_PERIOD")
+}
+
+func (svc *configService) GetReattemptPeriod() string {
+	if os.Getenv("REATTEMPT_PERIOD") == "" {
+		return "48 HOURS"
+	}
+
+	return os.Getenv("REATTEMPT_PERIOD")
 }
 
 func (svc *configService) GetVideoTranscriptionCutoffDate() string {
@@ -123,6 +143,15 @@ func (svc *configService) GetOpenAIKey() string {
 
 func (svc *configService) GetCloudConvertKey() string {
 	return os.Getenv("CLOUDCONVERT_API_KEY")
+}
+
+func (svc *configService) GetCloudConvertAttempts() int {
+	w, err := strconv.Atoi(os.Getenv("CLOUDCONVERT_ATTEMPTS"))
+	if err != nil {
+		return 180
+	}
+
+	return w
 }
 
 func (svc *configService) Finalize() {

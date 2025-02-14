@@ -292,17 +292,17 @@ func (svc *dataService) RetrieveExtractErroredVideos(channelID string, max int) 
 	}
 
 	// The errored videos have invalid extraction URL
-	// and it has not been more than 48 hours since the extraction.
+	// and it has not been more than configurable hours since the extraction.
 	// The last clause is to prevent the errored videos from being picked up perpetually (i.e. cyclic extraction).
-	query := `
+	query := fmt.Sprintf(`
         SELECT * FROM videos 
 		WHERE channel_id = $1 
 		AND extracted_at is not null 
 		AND extraction_url = $2
-		AND extracted_at >= NOW() - INTERVAL '48 HOURS'
+		AND extracted_at >= NOW() - INTERVAL '%s'
 		ORDER BY published_at DESC 
 		LIMIT $3 
-    `
+    `, svc.ConfigSvc.GetReattemptPeriod())
 
 	err = svc.Db.Select(&videos, query, channelID, service.InvalidURL, max)
 	if err != nil {
@@ -373,17 +373,17 @@ func (svc *dataService) RetrieveAudioErroredVideos(channelID string, max int) ([
 	}
 
 	// The errored videos have invalid audio URL
-	// and it has not been more than 48 hours since the audio conversion.
+	// and it has not been more than configurable hours since the audio conversion.
 	// The last clause is to prevent the errored videos from being picked up perpetually (i.e. cyclic extraction).
-	query := `
+	query := fmt.Sprintf(`
         SELECT * FROM videos 
 		WHERE channel_id = $1 
 		AND audioed_at is not null 
 		AND audio_url = $2
-		AND audioed_at >= NOW() - INTERVAL '48 HOURS'
+		AND audioed_at >= NOW() - INTERVAL '%s'
 		ORDER BY published_at DESC 
 		LIMIT $3 
-    `
+    `, svc.ConfigSvc.GetReattemptPeriod())
 
 	err = svc.Db.Select(&videos, query, channelID, service.InvalidURL, max)
 	if err != nil {
@@ -431,17 +431,17 @@ func (svc *dataService) RetrieveTranscribeErroredVideos(channelID string, max in
 	}
 
 	// The errored videos have invalid transcription URL
-	// and it has not been more than 48 hours since the transcription.
+	// and it has not been more than configurable hours since the transcription.
 	// The last clause is to prevent the errored videos from being picked up perpetually (i.e. cyclic extraction).
-	query := `
+	query := fmt.Sprintf(`
         SELECT * FROM videos 
 		WHERE channel_id = $1 
 		AND transcribed_at is not null 
 		AND transcription_url = $2
-		AND transcribed_at >= NOW() - INTERVAL '48 HOURS'
+		AND transcribed_at >= NOW() - INTERVAL '%s'
 		ORDER BY published_at DESC 
 		LIMIT $3 
-    `
+    `, svc.ConfigSvc.GetReattemptPeriod())
 
 	err = svc.Db.Select(&videos, query, channelID, service.InvalidURL, max)
 	if err != nil {
@@ -458,14 +458,14 @@ func (svc *dataService) RetrieveUpdatedVideos(channelID string, max int) ([]Vide
 		return videos, err
 	}
 
-	query := `
+	query := fmt.Sprintf(`
         SELECT * FROM videos 
 		WHERE channel_id = $1 
 		AND externalized_at is not null 
-		AND updated_at >= NOW() - INTERVAL '48 HOURS'
+		AND updated_at >= NOW() - INTERVAL '%s'
 		ORDER BY published_at DESC 
 		LIMIT $2 
-    `
+    `, svc.ConfigSvc.GetUpdatePeriod())
 
 	err = svc.Db.Select(&videos, query, channelID, max)
 	if err != nil {

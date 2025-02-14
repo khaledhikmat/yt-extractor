@@ -2,6 +2,7 @@ package config
 
 type IService interface {
 	GetRuntimeEnvironment() string
+	IsProduction() bool
 	GetAPIPort() string
 	IsOpenTelemetry() bool
 	IsParseCodecEnabled() bool
@@ -15,6 +16,8 @@ type IService interface {
 	GetLocalAudioFolder() string
 	GetLocalTranscriptionFolder() string
 
+	GetUpdatePeriod() string
+	GetReattemptPeriod() string
 	GetVideoTranscriptionCutoffDate() string
 
 	GetTranscriptionProvider() string
@@ -33,6 +36,8 @@ type IService interface {
 	GetYoutubeAPIKey() string
 	GetOpenAIKey() string
 	GetCloudConvertKey() string
+
+	GetCloudConvertAttempts() int
 
 	Finalize()
 }

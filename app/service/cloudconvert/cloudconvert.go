@@ -137,11 +137,11 @@ func (svc *cloudConvertService) checkJobStatus(jobID, channelID, videoID string)
 		idx++
 
 		// Timeout after 180 attempts ~= 15 minutes
-		if idx > 120 {
+		if idx > svc.ConfigSvc.GetCloudConvertAttempts() {
 			lgr.Logger.Debug("checkJobStatus",
-				slog.String("timeout", "15 mins"),
+				slog.String("timeout", fmt.Sprintf("%d attempts", svc.ConfigSvc.GetCloudConvertAttempts())),
 			)
-			return "", fmt.Errorf("cloudconvert job timedout after 15 minutes")
+			return "", fmt.Errorf("cloudconvert job timed out after %d attempts", svc.ConfigSvc.GetCloudConvertAttempts())
 		}
 	}
 }
