@@ -318,6 +318,17 @@ Here is what you can do to convert from AV1 to H264:
 ffmpeg -i "https://yt-extractor.s3.us-east-2.amazonaws.com/UCP-PfkMcOKriSxFMH7pTxfA/14NYvRyAe3Y.mp4" -c:v libx264 -preset fast -crf 23 -c:a copy "output_file.mp4"
 ```
 
+Another issue I encountered is that the extraction works well on my local laptop. However, when I deploy to Railway, I get permission errors likely because Google Youtube protection bot got activated looking for non-browser access. 
+
+This is a known problem and documented [here](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp).
+
+I tried several options as shown in the [code](./app/service/youtube/youtube.go#L403). Here is the command to generate cookies file: 
+
+```bash
+yt-dlp --cookies-from-browser chrome --cookies cookies.txt
+```
+The thing is that this `cookies.txt` file is private and should not be checked in. This means that the Docker image must be generated locally.
+
 ## Risks
 
 - Google YT API Key expiration in TEST mode. 

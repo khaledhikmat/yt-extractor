@@ -27,3 +27,9 @@ select * from jobs ORDER BY started_at DESC LIMIT 10;
 select * from errors;
 -- delete from errors;
 
+-- TEST Video ID: 1546
+SELECT * FROM videos WHERE id = 1546;
+UPDATE videos SET externalized_at = NOW() WHERE ID = 1546;
+UPDATE videos SET extracted_at = null, extraction_url = null WHERE ID = 1546;
+
+

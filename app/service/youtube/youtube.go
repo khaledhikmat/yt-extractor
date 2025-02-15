@@ -394,6 +394,12 @@ func runYTDLPExtractor(videoID, videoURL, videosFolder, codecsFolder string, isP
 		scrapedCodecIDs = ""
 	}
 
+	lgr.Logger.Debug("runYTDLPExtractor",
+		slog.Bool("Prod", isProd),
+		slog.String("videoID", videoID),
+		slog.String("videoURL", videoURL),
+	)
+
 	codecIDsList := []string{defaultCodecIDs, scrapedCodecIDs}
 	for _, codecIDs := range codecIDsList {
 		if codecIDs == "" {
@@ -405,9 +411,17 @@ func runYTDLPExtractor(videoID, videoURL, videosFolder, codecsFolder string, isP
 		if isProd {
 			// In production running in Docker, we must spoof headers and user agent to prevent
 			// triggering YouTube's anti-bot measures
-			// Try using a realistic browser User-Agent to make requests look more like a human browsing.
-			userAgent := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-			cmd = exec.Command("yt-dlp", "--user-agent", userAgent, "-f", codecIDs, "--merge-output-format", "mp4", videoURL, "-o", outputFile)
+			// Option1: Try using a realistic browser User-Agent to make requests look more like a human browsing.
+			// userAgent := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+			// lgr.Logger.Debug("runYTDLPExtractor",
+			// 	slog.String("userAgent", userAgent),
+			// )
+			// cmd = exec.Command("yt-dlp", "--user-agent", userAgent, "-f", codecIDs, "--merge-output-format", "mp4", videoURL, "-o", outputFile)
+			// Option2: Documented in https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp
+			lgr.Logger.Debug("runYTDLPExtractor",
+				slog.String("cookies", "./cookies.txt"),
+			)
+			cmd = exec.Command("yt-dlp", "--cookies", "./cookies.txt", "-f", codecIDs, "--merge-output-format", "mp4", videoURL, "-o", outputFile)
 		} else {
 			cmd = exec.Command("yt-dlp", "-f", codecIDs, "--merge-output-format", "mp4", videoURL, "-o", outputFile)
 		}
