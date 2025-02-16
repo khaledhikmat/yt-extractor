@@ -103,7 +103,9 @@ psql --host=monorail.proxy.rlwy.net --port=11397 --username=postgres --dbname=ra
 - ~~OpenAI does not aupport async calling where results are rendered via webhook.~~
 - Not sure how to mitigate the job running risk
 - Consider using webhook for CloudConvert PROD and polling for DEV. 
-- Automation risk where if insert/update fails to external databases. We may insert another time.  
+- Automation risk where if insert/update fails to external databases. We may insert another one.
+- Extraction does not easily work in Docker because the Youtube bot kicks in and prevent the extraction to run. See below. 
+- Add a new atomation job that can sequence several jobs together.   
 
 ## Automations
 
@@ -112,7 +114,8 @@ These automations require a Youtube channel ID to operarte on and an API Key:
 | Automation      | Description                       | Interval | Size |
 |-----------------|-----------------------------------|----------|------|
 | Pull            | Request yt videos be pulled from Youtube using API  | 6:00 AM EST Daily | 100 |
-| Extract         | Request unextracted yt videos be extracted into S3   | 7:00 EST Daily | 10 |
+| Automation      | Request a sequence of jobs to run synchronously: Extraction Error, Extraction, Audio Error, Audio, Transcription Error, Transcription | 7:00 AM EST Daily | 10 |
+| Extract         | Request unextracted yt videos be extracted into S3   | 7:00 AM EST Daily | 10 |
 | Re-attempt Extract | Request errored extractions be re-attempted   | 8:00 AM EST Daily | 10 |
 | Audio | Request yt videos be audioed   | 9:00 AM EST Daily | 10 |
 | Re-attempt Audio | Request errored audios be re-attempted   | 10:00 AM EST Daily | 10 |

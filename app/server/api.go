@@ -18,6 +18,7 @@ import (
 	"github.com/khaledhikmat/yt-extractor/job"
 	jobattributes "github.com/khaledhikmat/yt-extractor/job/attributes"
 	jobaudio "github.com/khaledhikmat/yt-extractor/job/audio"
+	jobautomation "github.com/khaledhikmat/yt-extractor/job/automation"
 	jobextraction "github.com/khaledhikmat/yt-extractor/job/extraction"
 	jobtranscription "github.com/khaledhikmat/yt-extractor/job/transcription"
 )
@@ -34,6 +35,7 @@ var jobProcs = map[data.JobType]job.Processor{
 	data.JobTypeAudioError:         jobaudio.Processor,
 	data.JobTypeTranscription:      jobtranscription.Processor,
 	data.JobTypeTranscriptionError: jobtranscription.Processor,
+	data.JobTypeAutomation:         jobautomation.Processor,
 }
 
 func apiRoutes(ctx context.Context,

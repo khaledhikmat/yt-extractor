@@ -240,9 +240,6 @@ func getVideoStatistics(apiKey string, videoIDs []string) (map[string]Video, err
 	defer resp.Body.Close()
 
 	var statsResponse VideoStatisticsResponse
-	// if err := json.NewDecoder(resp.Body).Decode(&statsResponse); err != nil {
-	// 	return nil, err
-	// }
 	err = json.Unmarshal(body, &statsResponse)
 	if err != nil {
 		return nil, err
@@ -275,14 +272,14 @@ func extractFirstID(line string) string {
 	return "" // Return an empty string if no match is found
 }
 
-func scrapeCodecIDs(videoURL, codecsFolder string) (string, error) {
+func scrapeCodecIDs(videoURL, codecsFolder string, isProd bool) (string, error) {
 	codecIDs := ""
 
 	// Generate codec file
 	codecFile := fmt.Sprintf("./%s/%s.txt", codecsFolder, extractVideoID(videoURL))
 
 	// Run yt-dlp to fetch available formats
-	err := runYTDLPWithOutput(videoURL, codecFile)
+	err := runYTDLPWithOutput(videoURL, codecFile, isProd)
 	if err != nil {
 		return "", err
 	}
@@ -353,7 +350,7 @@ func processCodecFile(filePath string) (string, error) {
 	return extractFirstID(videoLines[len(videoLines)-1]) + "+" + extractFirstID(audioLines[len(audioLines)-1]), nil
 }
 
-func runYTDLPWithOutput(videoURL, outputFile string) error {
+func runYTDLPWithOutput(videoURL, outputFile string, isProd bool) error {
 	// Define video URL and output file name
 	// videoURL := "https://www.youtube.com/watch?v=wQlek65Hp2w"
 	// outputFile := "wQlek65Hp2w.txt"
@@ -366,7 +363,13 @@ func runYTDLPWithOutput(videoURL, outputFile string) error {
 	defer file.Close()
 
 	// Construct the command
-	cmd := exec.Command("yt-dlp", "-F", videoURL)
+	var cmd *exec.Cmd
+	fmt.Printf("runYTDLPWithOutput - prod: %t - cookies: %s\n", isProd, "./cookies.txt")
+	if isProd {
+		cmd = exec.Command("yt-dlp", "--cookies", "./cookies.txt", "-F", videoURL)
+	} else {
+		cmd = exec.Command("yt-dlp", "-F", videoURL)
+	}
 
 	// Redirect the command's output to the file
 	cmd.Stdout = file
@@ -389,16 +392,12 @@ func runYTDLPExtractor(videoID, videoURL, videosFolder, codecsFolder string, isP
 	// 1. first with the default codec IDs,
 	// 2. with scraped codec IDs
 
-	scrapedCodecIDs, err := scrapeCodecIDs(videoURL, codecsFolder)
+	scrapedCodecIDs, err := scrapeCodecIDs(videoURL, codecsFolder, isProd)
 	if err != nil {
 		scrapedCodecIDs = ""
 	}
 
-	lgr.Logger.Debug("runYTDLPExtractor",
-		slog.Bool("Prod", isProd),
-		slog.String("videoID", videoID),
-		slog.String("videoURL", videoURL),
-	)
+	fmt.Printf("runYTDLPExtractor - prod: %t - videoId: %s - videoURL: %s\n", isProd, videoID, videoURL)
 
 	codecIDsList := []string{defaultCodecIDs, scrapedCodecIDs}
 	for _, codecIDs := range codecIDsList {
@@ -418,9 +417,7 @@ func runYTDLPExtractor(videoID, videoURL, videosFolder, codecsFolder string, isP
 			// )
 			// cmd = exec.Command("yt-dlp", "--user-agent", userAgent, "-f", codecIDs, "--merge-output-format", "mp4", videoURL, "-o", outputFile)
 			// Option2: Documented in https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp
-			lgr.Logger.Debug("runYTDLPExtractor",
-				slog.String("cookies", "./cookies.txt"),
-			)
+			fmt.Printf("runYTDLPExtractor - prod: %t - cookies: %s\n", isProd, "./cookies.txt")
 			cmd = exec.Command("yt-dlp", "--cookies", "./cookies.txt", "-f", codecIDs, "--merge-output-format", "mp4", videoURL, "-o", outputFile)
 		} else {
 			cmd = exec.Command("yt-dlp", "-f", codecIDs, "--merge-output-format", "mp4", videoURL, "-o", outputFile)

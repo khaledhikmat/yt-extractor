@@ -44,6 +44,7 @@ const (
 	JobTypeAudioError         JobType = "audioerror"
 	JobTypeTranscription      JobType = "transcription"
 	JobTypeTranscriptionError JobType = "transcriptionerror"
+	JobTypeAutomation         JobType = "automation"
 )
 
 type Job struct {
