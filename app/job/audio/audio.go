@@ -120,7 +120,7 @@ func Processor(ctx context.Context,
 }
 
 func updateDb(datasvc data.IService, errorStream chan error, video *data.Video, job *data.Job, url *string) {
-	// Update the video with transcription URL
+	// Update the video with audio URL
 	now := time.Now()
 	video.AudioURL = url
 	video.AudioedAt = &now

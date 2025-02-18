@@ -36,6 +36,8 @@ type IService interface {
 	GetYoutubeAPIKey() string
 	GetOpenAIKey() string
 	GetCloudConvertKey() string
+	GetCloudConvertWebhookURL() string
+	IsCloudConvertWebhook() bool
 
 	GetCloudConvertAttempts() int
 

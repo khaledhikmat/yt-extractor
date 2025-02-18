@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/khaledhikmat/yt-extractor/service"
 	"github.com/khaledhikmat/yt-extractor/service/config"
 	"github.com/khaledhikmat/yt-extractor/service/lgr"
 )
@@ -29,7 +30,7 @@ func (svc *cloudConvertService) ConvertVideoToAudio(channelID, videoID string) (
 	)
 
 	// This assumes that the video is stored in S3
-
+	// and that the audio will be stored in S3 as well
 	url := "https://api.cloudconvert.com/v2/jobs"
 	jobData := map[string]interface{}{
 		"tasks": map[string]interface{}{
@@ -57,6 +58,12 @@ func (svc *cloudConvertService) ConvertVideoToAudio(channelID, videoID string) (
 				"key":               fmt.Sprintf("%s/%s.mp3", channelID, videoID),
 			},
 		},
+		"tag": fmt.Sprintf("%s|%s", channelID, videoID),
+	}
+
+	// Add the webhook URL if it is required
+	if svc.ConfigSvc.IsCloudConvertWebhook() {
+		jobData["webhook_url"] = svc.ConfigSvc.GetCloudConvertWebhookURL()
 	}
 
 	jobBody, _ := json.Marshal(jobData)
@@ -84,6 +91,10 @@ func (svc *cloudConvertService) ConvertVideoToAudio(channelID, videoID string) (
 	jobID := jobResp["data"].(map[string]interface{})["id"].(string)
 	if jobID == "" {
 		return "", fmt.Errorf("job id is empty")
+	}
+
+	if svc.ConfigSvc.IsCloudConvertWebhook() {
+		return service.AcceptedURL, nil
 	}
 
 	// Poll for job status

@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/khaledhikmat/yt-extractor/service"
 	"github.com/khaledhikmat/yt-extractor/service/audio"
 	"github.com/khaledhikmat/yt-extractor/service/cloudconvert"
 	"github.com/khaledhikmat/yt-extractor/service/config"
@@ -626,6 +628,106 @@ func apiRoutes(ctx context.Context,
 			"data": nil,
 		})
 	})
+
+	r.POST("/cloudconvert/webhook", func(c *gin.Context) {
+		// isPermitted := isPermitted(c, datasvc)
+		// if !isPermitted {
+		// 	c.JSON(403, gin.H{
+		// 		"message": "Invalid or missing API key",
+		// 	})
+		// 	return
+		// }
+
+		var webhookResponse map[string]interface{}
+		if err := c.ShouldBindJSON(&webhookResponse); err != nil {
+			errorStream <- fmt.Errorf("cloudconvert webhook - invalid response payload: %s", err.Error())
+			c.JSON(400, gin.H{
+				"message": fmt.Sprintf("invalid response payload: %s", err.Error()),
+			})
+			return
+		}
+
+		status := webhookResponse["event"]
+		if status == "" {
+			// Do not return error to the webhook
+			errorStream <- fmt.Errorf("cloudconvert webhook - event status is missing")
+			c.JSON(200, gin.H{
+				"data": nil,
+			})
+			return
+		}
+
+		if webhookResponse["job"] == nil {
+			// Do not return error to the webhook
+			errorStream <- fmt.Errorf("cloudconvert webhook - job is missing")
+			c.JSON(200, gin.H{
+				"data": nil,
+			})
+			return
+		}
+
+		tag := webhookResponse["job"].(map[string]interface{})["tag"].(string)
+		if tag == "" {
+			// Do not return error to the webhook
+			errorStream <- fmt.Errorf("cloudconvert webhook - tag is missing")
+			c.JSON(200, gin.H{
+				"data": nil,
+			})
+			return
+		}
+
+		tagParts := strings.Split(tag, "|")
+		if len(tagParts) != 2 {
+			// Do not return error to the webhook
+			errorStream <- fmt.Errorf("cloudconvert webhook - tag %s is invalid", tag)
+			c.JSON(200, gin.H{
+				"data": nil,
+			})
+			return
+		}
+
+		channelID := tagParts[0]
+		videoID := tagParts[1]
+		url := service.InvalidURL
+		if status == "job.finished" {
+			// URL must be generated from the bucket name and the folder
+			url = fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cfgsvc.GetStorageBucket(), cfgsvc.GetStorageRegion(), fmt.Sprintf("%s/%s.mp3", channelID, videoID))
+			_ = updateDb(datasvc, errorStream, channelID, videoID, &url)
+		} else if status == "job.failed" {
+			url = service.InvalidURL
+			errorStream <- fmt.Errorf("cloudconvert webhook - job failed for channel %s and video %s", channelID, videoID)
+			_ = updateDb(datasvc, errorStream, channelID, videoID, &url)
+		}
+
+		c.JSON(200, gin.H{
+			"data": nil,
+		})
+	})
+}
+
+func updateDb(datasvc data.IService, errorStream chan error, channelID, videoID string, URL *string) error {
+	video, err := datasvc.RetrieveVideoByIDs(channelID, videoID)
+	if err != nil {
+		errorStream <- err
+		return err
+	}
+
+	if *video.AudioURL != service.AcceptedURL {
+		errorStream <- fmt.Errorf("audio URL is not in waiting state")
+		return fmt.Errorf("audio URL is not in waiting state")
+	}
+
+	// Update the video with audio URL
+	now := time.Now()
+	video.AudioURL = URL
+	video.AudioedAt = &now
+	err = datasvc.UpdateVideo(&video, data.JobTypeAudio)
+	if err != nil {
+		errorStream <- err
+		return err
+	}
+
+	return nil
 }
 
 func ProcessJob(ctx context.Context,

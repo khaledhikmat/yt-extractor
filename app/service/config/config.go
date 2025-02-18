@@ -145,6 +145,14 @@ func (svc *configService) GetCloudConvertKey() string {
 	return os.Getenv("CLOUDCONVERT_API_KEY")
 }
 
+func (svc *configService) GetCloudConvertWebhookURL() string {
+	return os.Getenv("CLOUDCONVERT_WEBHOOK_URL")
+}
+
+func (svc *configService) IsCloudConvertWebhook() bool {
+	return os.Getenv("CLOUDCONVERT_WEBHOOK") == "true"
+}
+
 func (svc *configService) GetCloudConvertAttempts() int {
 	w, err := strconv.Atoi(os.Getenv("CLOUDCONVERT_ATTEMPTS"))
 	if err != nil {

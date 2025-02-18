@@ -21,15 +21,16 @@ select * from jobs where state = 'running';
 --delete from jobs where state = 'running';
 select * from jobs where id = 590;
 select * from jobs ORDER BY STARTED_AT DESC LIMIT 10;
-select * from jobs where state = 'completed' ORDER BY started_at DESC LIMIT 10;
+SELECT * FROM jobs WHERE STATE = 'completed' ORDER BY started_at DESC LIMIT 10;
 select * from jobs ORDER BY started_at DESC LIMIT 10;
 -- delete from jobs where id < 592;
 select * from errors;
 -- delete from errors;
 
 -- TEST Video ID: 1546
-SELECT * FROM videos WHERE id = 1546;
+SELECT * FROM videos WHERE id = 1547;
 UPDATE videos SET externalized_at = NOW() WHERE ID = 1546;
 UPDATE videos SET extracted_at = null, extraction_url = null WHERE ID = 1546;
+--DELETE FROM videos WHERE id = 1546;
 
 
