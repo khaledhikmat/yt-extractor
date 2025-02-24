@@ -5,18 +5,16 @@ The project provides a user interface on [Notion](https://notion.com).
 ## Macro Architecture
 
 - Backend
-    - Golang
-    - Railway
+    - Golang deployed on Railway
 - Database
-    - Postgres
-    - Neon
+    - Postgres deployed in Railway
 - Automations
     - Make.com
     - CloudConvert
     - OpenAI
 - Frontend
-    - Notion
-    - Google Sheet
+    - Notion (sorted by published_date DESC and rendedred on multiple views)
+    - Google Sheet (sorted by published_date DESC)
 
 ## Tools
 
@@ -39,21 +37,6 @@ Currently the deployment is manual. But the following are some improvements:
 
 - Terraform is not used. The only AWS resource is an S3 bucket.
 - S3 bucket `yt-extractor` is created manually from the console and it is publicly accessible. 
-
-### Neon
-
-- Make use of branches
-- Install CLI
-- Automate using API
-- Backup the database:
-
-```bash
-pg_dump -h ep-crimson-feather-a5n37o2g-pooler.us-east-2.aws.neon.tech -U neondb_owner -d neondb -F c -f ./dba/dumps/neon_backup_$(date +"%Y-%m-%d").dump
-```
-
-```bash
-pg_dump -h ep-crimson-feather-a5n37o2g-pooler.us-east-2.aws.neon.tech -U neondb_owner -d neondb -F p -f ./dba/dumps/neon_backup_$(date +"%Y-%m-%d").sql
-```
 
 ### Railway
 
@@ -102,24 +85,24 @@ psql --host=monorail.proxy.rlwy.net --port=11397 --username=postgres --dbname=ra
 - ~~Considered AWS S3 Auto-Transcription but dismissed it due to cost.~~
 - ~~OpenAI does not aupport async calling where results are rendered via webhook.~~
 - Not sure how to mitigate the job running risk
-- Consider using webhook for CloudConvert PROD and polling for DEV. 
+- ~~Consider using webhook for CloudConvert PROD and polling for DEV.~~ 
 - Automation risk where if insert/update fails to external databases. We may insert another one.
 - Extraction does not easily work in Docker because the Youtube bot kicks in and prevent the extraction to run. See below. 
-- Add a new atomation job that can sequence several jobs together.   
+- ~~Add a new atomation job that can sequence several jobs together.~~   
 
 ## Automations
 
-These automations require a Youtube channel ID to operarte on and an API Key:
+These automations require a Youtube channel ID to operarte on and an API Key. Please note the folowing:
+- The extraction automation is not scheduled to run as extraction needs to run locally due to issues with permissions when running within a Docker container. 
+- The transcription process runs automatically when the audio webhook posts successfully. Hence there is no need to run transcription automation. Transcription errors automation, however, runs on interval as expected. 
 
 | Automation      | Description                       | Interval | Size |
 |-----------------|-----------------------------------|----------|------|
 | Pull            | Request yt videos be pulled from Youtube using API  | 6:00 AM EST Daily | 100 |
-| Automation      | Request a sequence of jobs to run synchronously: Extraction Error, Extraction, Audio Error, Audio, Transcription Error, Transcription | 7:00 AM EST Daily | 10 |
-| Extract         | Request unextracted yt videos be extracted into S3   | 7:00 AM EST Daily | 10 |
-| Re-attempt Extract | Request errored extractions be re-attempted   | 8:00 AM EST Daily | 10 |
+| Extract         | Request unextracted yt videos be extracted (locally) into S3   | 7:00 AM EST Daily | 10 |
+| Re-attempt Extract | Request errored extractions be re-attempted (locally)   | 8:00 AM EST Daily | 10 |
 | Audio | Request yt videos be audioed   | 9:00 AM EST Daily | 10 |
 | Re-attempt Audio | Request errored audios be re-attempted   | 10:00 AM EST Daily | 10 |
-| Transcribe | Request yt videos be transcribed   | 11:00 AM EST Daily | 10 |
 | Re-attempt Transcribe | Request errored transcriptions be re-attempted   | 12:00 PM EST Daily | 10 |
 | Externalization | Export extracted videos to external sheets (Google and Notion)   | 1:00 PM EST Daily | 100 |
 | Updation | Updates any updated records in the last 24 hrs to set the latest video metrics: comments, views and likes in addition to the audio, transcription and extraction URLs  | 2:00 PM EST Daily | 100 |
@@ -331,6 +314,75 @@ I tried several options as shown in the [code](./app/service/youtube/youtube.go#
 yt-dlp --cookies-from-browser chrome --cookies cookies.txt
 ```
 The thing is that this `cookies.txt` file is private and should not be checked in. This means that the Docker image must be generated locally.
+
+## Audio old video
+
+- Locate an old video published before 2025.
+
+- Record its `pubslished_at` date.
+
+- Run this query to update its `published_at` date:
+
+```sql
+UPDATE videos 
+SET 
+audioed_at = null, 
+audio_url = null, 
+published_at = '2025-02-01 00:00:00' 
+WHERE ID = xxx;
+```
+
+- Make sure the video is targeted in the missing audio query:
+
+```sql
+-- Audio Criteria
+SELECT * FROM videos 
+WHERE channel_id = 'UCP-PfkMcOKriSxFMH7pTxfA' 
+AND externalized_at is not null 
+AND extracted_at is not null 
+AND extraction_url != 'https://www.isitdownrightnow.com' 
+AND audioed_at is null 
+AND published_at >= '2025-01-01 00:00:00'
+ORDER BY published_at DESC 
+LIMIT 10
+```
+
+- Submit a post to start an audio process:
+
+```json
+{
+    "channelId": "UCP-PfkMcOKriSxFMH7pTxfA",
+    "type": "transcription"
+}
+```
+
+- When done, put back the old `published_at` date:
+
+```sql
+UPDATE videos 
+SET 
+published_at = '2013-02-09 01:44:03' 
+WHERE ID = xxx;
+```
+
+## Docker Prune
+
+```bash
+# Remove all stopped containers
+docker container prune -f
+
+# Remove all unused images
+docker image prune -a -f
+
+# Remove all unused volumes
+docker volume prune -f
+
+# Remove all unused networks
+docker network prune -f
+
+# Remove all unused data
+docker system prune -a -f --volumes
+```
 
 ## Risks
 

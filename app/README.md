@@ -53,6 +53,12 @@ go get -u github.com/google/uuid
 
 **Please note** that running the application in `CONTINEOUS_EXTRACTION` mode requires resource dedication as it is pretty intensive. In other words, `CONTINEOUS_EXTRACTION` mode should only be engaged while running on local machine.
 
+## Run Locally
+
+```bash
+go run main.go
+```
+
 ## Build and Push to Docker Hub
 
 ```bash

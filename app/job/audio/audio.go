@@ -2,10 +2,10 @@ package jobaudio
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
-	"github.com/khaledhikmat/yt-extractor/service"
 	"github.com/khaledhikmat/yt-extractor/service/audio"
 	"github.com/khaledhikmat/yt-extractor/service/cloudconvert"
 	"github.com/khaledhikmat/yt-extractor/service/config"
@@ -74,6 +74,7 @@ func Processor(ctx context.Context,
 		slog.String("event", "receivedVideos"),
 		slog.Int("videos", len(videos)),
 	)
+	fmt.Printf("jobaudio.Processor - %d videos\n", len(videos))
 
 	// Update each videos with transcribed data
 	// WARNING: Any error causes the audio URL to be set to invalid
@@ -94,14 +95,14 @@ func Processor(ctx context.Context,
 			slog.String("event", "aboutToConvert"),
 			slog.String("videoId", video.VideoID),
 		)
+		fmt.Printf("jobaudio.Processor - video %s\n", video.VideoID)
 
 		// Use CloudConvert service to convert MP4 (stored in S3) to MP3 (stored in S3)
 		audioURL, err = cloudconvertsvc.ConvertVideoToAudio(video.ChannelID, video.VideoID)
 		if err != nil {
 			errorStream <- err
 			errors++
-			audioURL = service.InvalidURL
-			updateDb(datasvc, errorStream, &video, &job, &audioURL)
+			// Fall through to update the database with the error
 		}
 
 		lgr.Logger.Debug("jobaudio.Processor",
@@ -109,6 +110,7 @@ func Processor(ctx context.Context,
 			slog.String("videoId", video.VideoID),
 			slog.String("audioUrl", audioURL),
 		)
+		fmt.Printf("jobaudio.Processor - updating db video %s url %s\n", video.VideoID, audioURL)
 
 		// Update the video with audio URL
 		updateDb(datasvc, errorStream, &video, &job, &audioURL)
@@ -117,6 +119,7 @@ func Processor(ctx context.Context,
 	lgr.Logger.Debug("jobaudio.Processor",
 		slog.String("event", "done"),
 	)
+	fmt.Printf("jobaudio.Processor - done\n")
 }
 
 func updateDb(datasvc data.IService, errorStream chan error, video *data.Video, job *data.Job, url *string) {

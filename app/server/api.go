@@ -647,6 +647,8 @@ func apiRoutes(ctx context.Context,
 			return
 		}
 
+		fmt.Println("Webhook Payload:", webhookResponse)
+
 		status := webhookResponse["event"]
 		if status == "" {
 			// Do not return error to the webhook
@@ -676,6 +678,7 @@ func apiRoutes(ctx context.Context,
 			return
 		}
 
+		// We use the tag as a correlation ID
 		tagParts := strings.Split(tag, "|")
 		if len(tagParts) != 2 {
 			// Do not return error to the webhook
@@ -686,18 +689,31 @@ func apiRoutes(ctx context.Context,
 			return
 		}
 
+		fmt.Printf("Cloudconvert webhook - status: %s, tag: %s\n", status, tag)
+
 		channelID := tagParts[0]
 		videoID := tagParts[1]
 		url := service.InvalidURL
 		if status == "job.finished" {
 			// URL must be generated from the bucket name and the folder
-			url = fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cfgsvc.GetStorageBucket(), cfgsvc.GetStorageRegion(), fmt.Sprintf("%s/%s.mp3", channelID, videoID))
-			_ = updateDb(datasvc, errorStream, channelID, videoID, &url)
+			url = constructStorageURL(cfgsvc, channelID, videoID)
+			// Guard against multiple webhook posts by making sure that we
+			// return an error if the audio URL is not expected
+			video, err := updateDb(datasvc, errorStream, channelID, videoID, &url)
+			if err == nil {
+				// Start an asynchronous transcription processor to process the just-completed audio
+				go func() {
+					// Ignore the error because it has already been streamed to the error stream
+					_ = jobtranscription.Process(ctx, &video, errorStream, data.JobTypeTranscription, cfgsvc, datasvc, audiosvc, storagesvc, transcriptionsvc)
+				}()
+			}
 		} else if status == "job.failed" {
 			url = service.InvalidURL
 			errorStream <- fmt.Errorf("cloudconvert webhook - job failed for channel %s and video %s", channelID, videoID)
-			_ = updateDb(datasvc, errorStream, channelID, videoID, &url)
+			_, _ = updateDb(datasvc, errorStream, channelID, videoID, &url)
 		}
+
+		// If the job status is not finished and is not failed, do not do anything.
 
 		c.JSON(200, gin.H{
 			"data": nil,
@@ -705,16 +721,22 @@ func apiRoutes(ctx context.Context,
 	})
 }
 
-func updateDb(datasvc data.IService, errorStream chan error, channelID, videoID string, URL *string) error {
+func updateDb(datasvc data.IService, errorStream chan error, channelID, videoID string, URL *string) (data.Video, error) {
+	fmt.Printf("Cloudconvert webhook - updateDb - channel ID: %s, video ID: %s - URL: %s\n", channelID, videoID, *URL)
 	video, err := datasvc.RetrieveVideoByIDs(channelID, videoID)
 	if err != nil {
 		errorStream <- err
-		return err
+		return video, err
+	}
+
+	if video.AudioURL == nil {
+		errorStream <- fmt.Errorf("audio URL should not be nil")
+		return video, fmt.Errorf("audio URL should not be nil")
 	}
 
 	if *video.AudioURL != service.AcceptedURL {
-		errorStream <- fmt.Errorf("audio URL is not in waiting state")
-		return fmt.Errorf("audio URL is not in waiting state")
+		errorStream <- fmt.Errorf("audio URL %s is not in waiting state", *video.AudioURL)
+		return video, fmt.Errorf("audio URL %s is not in waiting state", *video.AudioURL)
 	}
 
 	// Update the video with audio URL
@@ -724,10 +746,11 @@ func updateDb(datasvc data.IService, errorStream chan error, channelID, videoID 
 	err = datasvc.UpdateVideo(&video, data.JobTypeAudio)
 	if err != nil {
 		errorStream <- err
-		return err
+		return video, err
 	}
 
-	return nil
+	fmt.Printf("Cloudconvert webhook - updateDb3\n")
+	return video, nil
 }
 
 func ProcessJob(ctx context.Context,
@@ -793,4 +816,9 @@ func isPermitted(c *gin.Context, datasvc data.IService) bool {
 	}
 
 	return true
+}
+
+func constructStorageURL(cfgsvc config.IService, channelID, videoID string) string {
+	return fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cfgsvc.GetStorageBucket(), cfgsvc.GetStorageRegion(), fmt.Sprintf("%s/%s.mp3", channelID, videoID))
+
 }

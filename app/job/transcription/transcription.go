@@ -92,112 +92,128 @@ func Processor(ctx context.Context,
 		default:
 		}
 
-		var transcriptionURL string
-
-		lgr.Logger.Debug("jobtranscription.Processor",
-			slog.String("event", "aboutToSplit"),
-			slog.String("videoId", video.VideoID),
-		)
-
-		// Use the audio service to segment the audio into 10-min audio files
-		// using the video audio URL
-		localAudioFiles, err := audiosvc.SplitAudio(*video.AudioURL)
+		// Process a single video for audio transcription
+		err := Process(ctx, &video, errorStream, job.Type, cfgsvc, datasvc, audiosvc, storagesvc, transcriptionsvc)
 		if err != nil {
-			errorStream <- err
 			errors++
-			transcriptionURL = service.InvalidURL
-			updateDb(datasvc, errorStream, &video, &job, &transcriptionURL)
 			continue
 		}
-
-		lgr.Logger.Debug("jobtranscription.Processor",
-			slog.String("event", "aboutToTranscribe"),
-			slog.String("videoId", video.VideoID),
-			slog.Int("audioFiles", len(localAudioFiles)),
-		)
-
-		defer func() {
-			// Delete local audio files
-			for _, file := range localAudioFiles {
-				// Ignore errors because they may have been deleted already
-				_ = os.Remove(file)
-			}
-		}()
-
-		// Use the transcription service to transcribe the segmented audio files
-		var transcribedText string
-		// For each segmented audio file
-		for _, file := range localAudioFiles {
-			// Use the transcription service to get a transcribed text
-			// and delete local audio file
-			txt, err := transcriptionsvc.TranscribeAudio(file)
-			if err != nil {
-				errorStream <- err
-				errors++
-				transcriptionURL = service.InvalidURL
-				updateDb(datasvc, errorStream, &video, &job, &transcriptionURL)
-				continue
-			}
-
-			lgr.Logger.Debug("jobtranscription.Processor",
-				slog.String("event", "completedIndividualTranscription"),
-				slog.String("videoId", video.VideoID),
-				slog.String("audioFile", file),
-			)
-
-			transcribedText += txt
-		}
-
-		lgr.Logger.Debug("jobtranscription.Processor",
-			slog.String("event", "savingToLocalFile"),
-			slog.String("videoId", video.VideoID),
-		)
-
-		// Save transcribed text in a file
-		localTextFile, err := saveToFile(transcribedText, cfgsvc.GetLocalTranscriptionFolder(), fmt.Sprintf("%s.txt", video.VideoID))
-		if err != nil {
-			errorStream <- err
-			errors++
-			transcriptionURL = service.InvalidURL
-			updateDb(datasvc, errorStream, &video, &job, &transcriptionURL)
-			continue
-		}
-
-		defer func() {
-			// Delete local text file
-			// Ignore errors because it may have been deleted already
-			_ = os.Remove(localTextFile)
-		}()
-
-		lgr.Logger.Debug("jobtranscription.Processor",
-			slog.String("event", "uploadingToS3"),
-			slog.String("videoId", video.VideoID),
-		)
-
-		// Upload to S3 and delete local text file
-		transcriptionURL, err = storagesvc.NewFile(ctx, video.ChannelID, localTextFile, fmt.Sprintf("%s.txt", video.VideoID))
-		if err != nil {
-			errorStream <- err
-			errors++
-			transcriptionURL = service.InvalidURL
-			updateDb(datasvc, errorStream, &video, &job, &transcriptionURL)
-			continue
-		}
-
-		lgr.Logger.Debug("jobtranscription.Processor",
-			slog.String("event", "updatingDb"),
-			slog.String("videoId", video.VideoID),
-			slog.String("audioUrl", *video.AudioURL),
-			slog.String("transcriptionUrl", transcriptionURL),
-		)
-
-		// Update the video with transcription URL
-		updateDb(datasvc, errorStream, &video, &job, &transcriptionURL)
 	}
 
 	lgr.Logger.Debug("jobtranscription.Processor",
 		slog.String("event", "done"),
 	)
+}
+
+// Exported to allow the server API (i.e. server/api.go) to also call it
+// upon webhook invocations
+func Process(ctx context.Context,
+	video *data.Video,
+	errorStream chan error,
+	jobType data.JobType,
+	cfgsvc config.IService,
+	datasvc data.IService,
+	audiosvc audio.IService,
+	storagesvc storage.IService,
+	transcriptionsvc transcription.IService) error {
+	var transcriptionURL string
+
+	lgr.Logger.Debug("jobtranscription.Process",
+		slog.String("event", "aboutToSplit"),
+		slog.String("videoId", video.VideoID),
+	)
+
+	// Use the audio service to segment the audio into 10-min audio files
+	// using the video audio URL so it can be easily transcribed
+	localAudioFiles, err := audiosvc.SplitAudio(*video.AudioURL)
+	if err != nil {
+		errorStream <- err
+		transcriptionURL = service.InvalidURL
+		updateDb(datasvc, errorStream, video, jobType, &transcriptionURL)
+		return err
+	}
+
+	lgr.Logger.Debug("jobtranscription.Process",
+		slog.String("event", "aboutToTranscribe"),
+		slog.String("videoId", video.VideoID),
+		slog.Int("audioFiles", len(localAudioFiles)),
+	)
+
+	defer func() {
+		// Delete local audio files
+		for _, file := range localAudioFiles {
+			// Ignore errors because they may have been deleted already
+			_ = os.Remove(file)
+		}
+	}()
+
+	// Use the transcription service to transcribe the segmented audio files
+	var transcribedText string
+	// For each segmented audio file
+	for _, file := range localAudioFiles {
+		// Use the transcription service to get a transcribed text
+		// and delete local audio file
+		txt, err := transcriptionsvc.TranscribeAudio(file)
+		if err != nil {
+			errorStream <- err
+			transcriptionURL = service.InvalidURL
+			updateDb(datasvc, errorStream, video, jobType, &transcriptionURL)
+			return err
+		}
+
+		lgr.Logger.Debug("jobtranscription.Process",
+			slog.String("event", "completedIndividualTranscription"),
+			slog.String("videoId", video.VideoID),
+			slog.String("audioFile", file),
+		)
+
+		transcribedText += txt
+	}
+
+	lgr.Logger.Debug("jobtranscription.Process",
+		slog.String("event", "savingToLocalFile"),
+		slog.String("videoId", video.VideoID),
+	)
+
+	// Save transcribed text in a file
+	localTextFile, err := saveToFile(transcribedText, cfgsvc.GetLocalTranscriptionFolder(), fmt.Sprintf("%s.txt", video.VideoID))
+	if err != nil {
+		errorStream <- err
+		transcriptionURL = service.InvalidURL
+		updateDb(datasvc, errorStream, video, jobType, &transcriptionURL)
+		return err
+	}
+
+	defer func() {
+		// Delete local text file
+		// Ignore errors because it may have been deleted already
+		_ = os.Remove(localTextFile)
+	}()
+
+	lgr.Logger.Debug("jobtranscription.Process",
+		slog.String("event", "uploadingToS3"),
+		slog.String("videoId", video.VideoID),
+	)
+
+	// Upload to S3 and delete local text file
+	transcriptionURL, err = storagesvc.NewFile(ctx, video.ChannelID, localTextFile, fmt.Sprintf("%s.txt", video.VideoID))
+	if err != nil {
+		errorStream <- err
+		transcriptionURL = service.InvalidURL
+		updateDb(datasvc, errorStream, video, jobType, &transcriptionURL)
+		return err
+	}
+
+	lgr.Logger.Debug("jobtranscription.Process",
+		slog.String("event", "updatingDb"),
+		slog.String("videoId", video.VideoID),
+		slog.String("audioUrl", *video.AudioURL),
+		slog.String("transcriptionUrl", transcriptionURL),
+	)
+
+	// Update the video with transcription URL
+	updateDb(datasvc, errorStream, video, jobType, &transcriptionURL)
+	return nil
 }
 
 func saveToFile(text, folder, fileName string) (string, error) {
@@ -219,12 +235,12 @@ func saveToFile(text, folder, fileName string) (string, error) {
 	return filePath, nil
 }
 
-func updateDb(datasvc data.IService, errorStream chan error, video *data.Video, job *data.Job, url *string) {
+func updateDb(datasvc data.IService, errorStream chan error, video *data.Video, jobType data.JobType, url *string) {
 	// Update the video with transcription URL
 	now := time.Now()
 	video.TranscriptionURL = url
 	video.TranscribedAt = &now
-	err := datasvc.UpdateVideo(video, job.Type)
+	err := datasvc.UpdateVideo(video, jobType)
 	if err != nil {
 		errorStream <- err
 	}

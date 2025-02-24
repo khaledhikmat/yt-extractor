@@ -74,23 +74,23 @@ func (svc *cloudConvertService) ConvertVideoToAudio(channelID, videoID string) (
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return service.InvalidURL, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		return "", fmt.Errorf("failed to create job, status: %s", resp.Status)
+		return service.InvalidURL, fmt.Errorf("failed to create job, status: %s", resp.Status)
 	}
 
 	var jobResp map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&jobResp)
 	if err != nil {
-		return "", fmt.Errorf("failed to decode job response: %v", err)
+		return service.InvalidURL, fmt.Errorf("failed to decode job response: %v", err)
 	}
 
 	jobID := jobResp["data"].(map[string]interface{})["id"].(string)
 	if jobID == "" {
-		return "", fmt.Errorf("job id is empty")
+		return service.InvalidURL, fmt.Errorf("job id is empty")
 	}
 
 	if svc.ConfigSvc.IsCloudConvertWebhook() {
@@ -120,18 +120,18 @@ func (svc *cloudConvertService) checkJobStatus(jobID, channelID, videoID string)
 		req.Header.Set("Authorization", "Bearer "+svc.ConfigSvc.GetCloudConvertKey())
 		resp, err := client.Do(req)
 		if err != nil {
-			return "", err
+			return service.InvalidURL, err
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			return "", fmt.Errorf("failed to show job, status: %s", resp.Status)
+			return service.InvalidURL, fmt.Errorf("failed to show job, status: %s", resp.Status)
 		}
 
 		var jobStatusResponse map[string]interface{}
 		err = json.NewDecoder(resp.Body).Decode(&jobStatusResponse)
 		if err != nil {
-			return "", fmt.Errorf("failed to decode job status response: %v", err)
+			return service.InvalidURL, fmt.Errorf("failed to decode job status response: %v", err)
 		}
 
 		status := jobStatusResponse["data"].(map[string]interface{})["status"].(string)
@@ -140,7 +140,7 @@ func (svc *cloudConvertService) checkJobStatus(jobID, channelID, videoID string)
 			url := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", svc.ConfigSvc.GetStorageBucket(), svc.ConfigSvc.GetStorageRegion(), fmt.Sprintf("%s/%s.mp3", channelID, videoID))
 			return url, nil
 		} else if status == "failed" {
-			return "", fmt.Errorf("cloudconvert job failed, status: %s", status)
+			return service.InvalidURL, fmt.Errorf("cloudconvert job failed, status: %s", status)
 		}
 
 		// Wait for 5 seconds before retrying
@@ -152,7 +152,7 @@ func (svc *cloudConvertService) checkJobStatus(jobID, channelID, videoID string)
 			lgr.Logger.Debug("checkJobStatus",
 				slog.String("timeout", fmt.Sprintf("%d attempts", svc.ConfigSvc.GetCloudConvertAttempts())),
 			)
-			return "", fmt.Errorf("cloudconvert job timed out after %d attempts", svc.ConfigSvc.GetCloudConvertAttempts())
+			return service.InvalidURL, fmt.Errorf("cloudconvert job timed out after %d attempts", svc.ConfigSvc.GetCloudConvertAttempts())
 		}
 	}
 }

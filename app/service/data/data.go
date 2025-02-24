@@ -322,8 +322,10 @@ func (svc *dataService) RetrieveUnexternalizedVideos(channelID string, max int) 
 	query := `
         SELECT * FROM videos 
 		WHERE channel_id = $1 
-		AND extracted_at is not null 
 		AND externalized_at is null 
+		AND extracted_at is not null 
+		AND audioed_at is not null 
+		AND transcribed_at is not null 
 		ORDER BY published_at DESC 
 		LIMIT $2 
     `
