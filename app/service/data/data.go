@@ -350,7 +350,6 @@ func (svc *dataService) RetrieveUnaudioedVideos(channelID string, max int) ([]Vi
 	query := fmt.Sprintf(`
         SELECT * FROM videos 
 		WHERE channel_id = $1 
-		AND externalized_at is not null 
 		AND extracted_at is not null 
 		AND extraction_url != '%s' 
 		AND audioed_at is null 
@@ -406,7 +405,6 @@ func (svc *dataService) RetrieveUntranscribedVideos(channelID string, max int) (
 	query := fmt.Sprintf(`
         SELECT * FROM videos 
 		WHERE channel_id = $1 
-		AND externalized_at is not null 
 		AND extracted_at is not null 
 		AND extraction_url != '%s' 
 		AND audioed_at is not null 
