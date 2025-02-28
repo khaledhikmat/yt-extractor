@@ -2,8 +2,12 @@ package jobattributes
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/khaledhikmat/yt-extractor/service/audio"
@@ -22,7 +26,7 @@ func Processor(ctx context.Context,
 	jobID int64,
 	pageSize int,
 	errorStream chan error,
-	_ config.IService,
+	cfgsvc config.IService,
 	datasvc data.IService,
 	ytsvc youtube.IService,
 	_ audio.IService,
@@ -69,6 +73,7 @@ func Processor(ctx context.Context,
 	}
 
 	// Insert/update videos into the database
+	insertedIDs := []int64{}
 	for _, ytvideo := range ytvideos {
 
 		// If the context is cancelled, exit the loop
@@ -106,15 +111,66 @@ func Processor(ctx context.Context,
 		}
 
 		// Insert or update the video into the database
-		_, err := datasvc.NewVideo(video)
+		insert, id, err := datasvc.NewVideo(video)
 		if err != nil {
 			errorStream <- err
 			errors++
 			continue
+		}
+
+		// If the video was inserted, add the ID to the list so we can notify the automation webhook
+		if insert {
+			insertedIDs = append(insertedIDs, id)
+		}
+	}
+
+	// Call automation webhook to convey that we have new videos
+	if len(insertedIDs) > 0 {
+		err = postToAutomationWebhook(insertedIDs, cfgsvc.GetAutomationWebhookURL())
+		if err != nil {
+			errorStream <- err
 		}
 	}
 
 	lgr.Logger.Debug("jobattributes.Processor",
 		slog.String("event", "done"),
 	)
+}
+
+func postToAutomationWebhook(insertIDs []int64, url string) error {
+	if url == "" {
+		return fmt.Errorf("postToAutomationWebhook - automation webhook URL is empty")
+	}
+
+	// Send the request to Make webhook endpoint
+	strIDs := make([]string, len(insertIDs))
+	for i, id := range insertIDs {
+		strIDs[i] = strconv.FormatInt(id, 10)
+	}
+
+	// Join the strings with commas
+	payload := strings.Join(strIDs, ",")
+	req, err := http.NewRequest("POST", url, strings.NewReader(payload))
+	if err != nil {
+		return fmt.Errorf("postToAutomationWebhook - could not create request: %w", err)
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+
+	// Execute the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("postToAutomationWebhook - request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check for HTTP errors
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("postToAutomationWebhook - unexpected status code: %d, response: %s", resp.StatusCode, respBody)
+	}
+
+	return nil
 }

@@ -81,28 +81,28 @@ func (svc *dataService) ResetFactory() error {
 	return nil
 }
 
-func (svc *dataService) NewVideo(video Video) (int64, error) {
+func (svc *dataService) NewVideo(video Video) (bool, int64, error) {
 	err := svc.dbConnection()
 	if err != nil {
-		return -1, err
+		return false, -1, err
 	}
 
 	// Make sure that video does not already exist
 	vid, err := svc.RetrieveVideoByIDs(video.ChannelID, video.VideoID)
 	if err != nil {
-		return -1, fmt.Errorf("Error fetching video by ID: %v", err)
+		return false, -1, fmt.Errorf("Error fetching video by ID: %v", err)
 	}
 
 	// If the video already exists, switch to update the attributes
 	if vid.VideoID != "" {
 		err = svc.UpdateVideo(&video, JobTypeAttributes)
-		return vid.ID, err
+		return false, vid.ID, err
 	}
 
 	// Execute the insert query using NamedExec or NamedQuery
 	rows, err := svc.Db.NamedQuery(insertVideoSQL, video)
 	if err != nil {
-		return -1, err
+		return false, -1, err
 	}
 	defer rows.Close()
 
@@ -110,11 +110,11 @@ func (svc *dataService) NewVideo(video Video) (int64, error) {
 	if rows.Next() {
 		err = rows.Scan(&video.ID)
 		if err != nil {
-			return -1, err
+			return false, -1, err
 		}
 	}
 
-	return video.ID, nil
+	return true, video.ID, nil
 }
 
 func (svc *dataService) UpdateVideo(video *Video, jobType JobType) error {

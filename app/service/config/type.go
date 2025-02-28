@@ -30,6 +30,8 @@ type IService interface {
 	GetAWSSecretAccessKey() string
 	GetAWSRegion() string
 
+	GetAutomationWebhookURL() string
+
 	GetDbDSN() string
 	GetNeonDSN() string
 	GetRailwayDSN() string

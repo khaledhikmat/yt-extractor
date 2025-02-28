@@ -125,6 +125,10 @@ func (svc *configService) GetYoutubeAPIKey() string {
 	return os.Getenv("YOUTUBE_API_KEY")
 }
 
+func (svc *configService) GetAutomationWebhookURL() string {
+	return os.Getenv(os.Getenv("AUTOMATION_WEBHOOK_URL"))
+}
+
 func (svc *configService) GetDbDSN() string {
 	return os.Getenv(os.Getenv("DB_DSN"))
 }

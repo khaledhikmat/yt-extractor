@@ -3,7 +3,7 @@ package data
 type IService interface {
 	ResetFactory() error
 
-	NewVideo(video Video) (int64, error)
+	NewVideo(video Video) (bool, int64, error)
 	UpdateVideo(video *Video, jobType JobType) error
 
 	RetrieveVideos(channelID string, page, pageSize int, orderBy, orderDir string) ([]Video, error)
