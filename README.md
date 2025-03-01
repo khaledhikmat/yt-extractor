@@ -109,7 +109,7 @@ These automations require a Youtube channel ID to operarte on and an API Key. Pl
 | Externalization | Export extracted videos to external sheets (Google and Notion)   | 1:00 PM EST Daily | 100 |
 | Updation | Updates any updated records in the last 24 hrs to set the latest video metrics: comments, views and likes in addition to the audio, transcription and extraction URLs  | 2:00 PM EST Daily | 100 |
 
-### Automation Pipeline
+### Pipeline
 
 Pull -> Extract -> Audio -> Transcribe -> Externalize
 
