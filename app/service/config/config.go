@@ -126,7 +126,7 @@ func (svc *configService) GetYoutubeAPIKey() string {
 }
 
 func (svc *configService) GetAutomationWebhookURL() string {
-	return os.Getenv(os.Getenv("AUTOMATION_WEBHOOK_URL"))
+	return os.Getenv("AUTOMATION_WEBHOOK_URL")
 }
 
 func (svc *configService) GetDbDSN() string {
