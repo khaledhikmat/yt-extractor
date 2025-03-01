@@ -100,7 +100,7 @@ These automations require a Youtube channel ID to operarte on and an API Key. Pl
 
 | Automation      | Description                       | Interval | Size |
 |-----------------|-----------------------------------|----------|------|
-| Pull            | Request yt videos be pulled from Youtube using API  | 6:00 AM EST Daily | 100 |
+| Pull            | Request yt videos be pulled from Youtube using API  | 6:00 AM EST Daily | -1 |
 | Extract         | Request unextracted yt videos be extracted (locally) into S3   | 7:00 AM EST Daily | 10 |
 | Re-attempt Extract | Request errored extractions be re-attempted (locally)   | 8:00 AM EST Daily | 10 |
 | Audio | Request yt videos be audioed   | 9:00 AM EST Daily | 10 |
