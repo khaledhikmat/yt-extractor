@@ -65,30 +65,32 @@ psql --host=monorail.proxy.rlwy.net --port=11397 --username=postgres --dbname=ra
 
 ## Issues
 
-- ~~Need a new Github repo.~~
-- Dockefile must be optimized.
-- Debug statement appear not strcutured in Railway log output.
-- ~~Need a tool to prepare for deployment:~~
-    - ~~Remove all bucket entries.~~
-    - ~~Truncate database tables.~~
-    - ~~Delete Google Sheet rows.~~
-    - ~~Delete Notion Rows.~~
-- ~~Observability? We have errors table in addition to Railway.~~
-- ~~Make.com automations require variables to store channel ID and API KEY. It turned out there is something called scenario input that is useful in this case.~~
-- ~~Add notes on the automations.~~
-- ~~Add Reset Factory API?~~
-- ~~Audio Split to generate transcription.~~
-- ~~Video Summary in Arabic and English is no longer needed.~~
-- ~~Video ID `E8yRq75_yBo` is being converted by the Cloud Convert to `E8yRq75yBo`!!!! This is solved by using CloudConvert file name instead of the video ID.~~
-- ~~Make.com automations must use both Google Sheets and Notion.~~
-- ~~Move transcription to the backend. [Make.com](https://us2.make.com) is a really nice platform but it can be cost prohibitive especially when the data transfer (i.e. egress) becomes big. Since transcription of MP4 files involve sending/downloading large files to/from CloudConvert and OpenAI, it is probably easier to run transcription locally on the backend.~~
-- ~~Considered AWS S3 Auto-Transcription but dismissed it due to cost.~~
-- ~~OpenAI does not aupport async calling where results are rendered via webhook.~~
-- Not sure how to mitigate the job running risk
-- ~~Consider using webhook for CloudConvert PROD and polling for DEV.~~ 
-- Automation risk where if insert/update fails to external databases. We may insert another one.
-- Extraction does not easily work in Docker because the Youtube bot kicks in and prevent the extraction to run. See below. 
-- ~~Add a new atomation job that can sequence several jobs together.~~   
+These are some project issues categorized in different buckets:
+
+- Documentation:
+    - Currently this README is acting like the main documentation for the project. We can move documentation to Docusaurus or Notion if need be.
+- Telemetry:
+    - The application has some instrumentation sprinkled in different places. 
+    - No ingestor is specified so the telemetry signal are being nooped (sent to the bit bucket).
+- Risks:
+    - If insert fails to Goole Sheet or Notion Database, there is no easy way to recover.
+    - If a job is stuck in `running` state, the only way to recover is to delete this record from the database. The `running` state prevents additional jobs to be kicked in.
+- Notion:
+    - Powerful platform.
+    - Experiment with calling the server or webhook from Notion.
+- Automation:
+    - Send updated google sheet weekly on Gmail.
+- Front-End:
+    - Notion Front End is reasonable
+    - Requires better Localization/Arabization.
+    - Google sheet must maintain published_date as the sort column. 
+- Improvements:
+    - Dockefile must be optimized.
+    - Debug statement appear not strcutured in Railway log output.
+    - Convert Front-End to a simple fully localized web app?
+- Bugs:
+    - Video ID 42 encounters audio errors. Try to re-audio.
+    - Extraction on server is not working. This is because Extraction does not easily work in Docker because the Youtube bot kicks in and prevent the extraction to run. See below. Currently, upon adding new videos, the application calls a Make.com automation web hook which sends an Email to me so I know to run the extraction locally. 
 
 ## Automations
 
@@ -107,9 +109,9 @@ These automations require a Youtube channel ID to operarte on and an API Key. Pl
 | Externalization | Export extracted videos to external sheets (Google and Notion)   | 1:00 PM EST Daily | 100 |
 | Updation | Updates any updated records in the last 24 hrs to set the latest video metrics: comments, views and likes in addition to the audio, transcription and extraction URLs  | 2:00 PM EST Daily | 100 |
 
-### Pipeline
+### Automation Pipeline
 
-Pull -> Extract -> Externalize -> Audio -> Transcribe
+Pull -> Extract -> Audio -> Transcribe -> Externalize
 
 ### Make.com
 
@@ -315,9 +317,11 @@ yt-dlp --cookies-from-browser chrome --cookies cookies.txt
 ```
 The thing is that this `cookies.txt` file is private and should not be checked in. This means that the Docker image must be generated locally.
 
-## Audio old video
+## Audio Old Video
 
-- Locate an old video published before 2025.
+If there is a need to audio an old file (prior to 2025) or re-audio a file, follow this procedure:
+
+- Locate an old video published before 2025. Get its `id`. 
 
 - Record its `pubslished_at` date.
 
@@ -338,7 +342,6 @@ WHERE ID = xxx;
 -- Audio Criteria
 SELECT * FROM videos 
 WHERE channel_id = 'UCP-PfkMcOKriSxFMH7pTxfA' 
-AND externalized_at is not null 
 AND extracted_at is not null 
 AND extraction_url != 'https://www.isitdownrightnow.com' 
 AND audioed_at is null 
@@ -385,6 +388,8 @@ docker system prune -a -f --volumes
 ```
 
 ## Risks
+
+The following are some riks associated with the project:
 
 - Google YT API Key expiration in TEST mode. 
 - Extractor tool constant updates may require periodic deployments.
