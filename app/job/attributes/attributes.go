@@ -156,7 +156,7 @@ func postToAutomationWebhook(insertIDs []int64, url string) error {
 	}
 
 	// Set headers
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "text/plain")
 
 	// Execute the request
 	client := &http.Client{}

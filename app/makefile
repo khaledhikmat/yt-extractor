@@ -9,6 +9,7 @@ clean_dist:
 
 test:
 	echo "Invoking test cases..."
+	#go test ./job/attributes -run TestPosting2Automation -v -count=1
 	#go test ./service/cloudconvert -run TestConversion -v -count=1
 	#go test ./service/transcription -run TestTranscription -v -count=1
 
