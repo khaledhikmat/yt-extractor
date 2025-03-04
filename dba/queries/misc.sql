@@ -17,6 +17,7 @@ SELECT * from videos where externalized_at is null;
 select * from videos where id = 43;
 -- update videos SET extraction_url = 'https://www.isitdownrightnow.com' WHERE id = 1219; 
 -- update videos SET processed_at = null, externalized_at = null;
+select * from jobs order by id desc limit 50;
 select * from jobs where state = 'running';
 --delete from jobs where state = 'running';
 select * from jobs where id = 590;
