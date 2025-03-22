@@ -44,6 +44,7 @@ const (
 	JobTypeAudioError         JobType = "audioerror"
 	JobTypeTranscription      JobType = "transcription"
 	JobTypeTranscriptionError JobType = "transcriptionerror"
+	JobTypeEmbedding          JobType = "embedding"
 	JobTypeAutomation         JobType = "automation"
 )
 

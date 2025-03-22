@@ -14,6 +14,7 @@ type IService interface {
 	RetrieveAudioErroredVideos(channelID string, max int) ([]Video, error)
 	RetrieveUntranscribedVideos(channelID string, max int) ([]Video, error)
 	RetrieveTranscribeErroredVideos(channelID string, max int) ([]Video, error)
+	RetrieveUnembeddedVideos(channelID string, max int) ([]Video, error)
 	RetrieveUpdatedVideos(channelID string, max int) ([]Video, error)
 
 	RetrieveVideoByIDs(channelID string, videoID string) (Video, error)

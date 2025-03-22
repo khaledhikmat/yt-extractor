@@ -452,6 +452,33 @@ func (svc *dataService) RetrieveTranscribeErroredVideos(channelID string, max in
 	return videos, nil
 }
 
+// Used for embedding within the backend
+func (svc *dataService) RetrieveUnembeddedVideos(channelID string, max int) ([]Video, error) {
+	videos := []Video{}
+	err := svc.dbConnection()
+	if err != nil {
+		return videos, err
+	}
+
+	// TODO: Embedding is not added to the schema yet
+	query := `
+        SELECT * FROM videos 
+		WHERE channel_id = $1 
+		AND extracted_at is not null 
+		AND audioed_at is not null 
+		AND transcribed_at is not null 
+		ORDER BY published_at DESC 
+		LIMIT $2 
+    `
+
+	err = svc.Db.Select(&videos, query, channelID, max)
+	if err != nil {
+		return videos, err
+	}
+
+	return videos, nil
+}
+
 func (svc *dataService) RetrieveUpdatedVideos(channelID string, max int) ([]Video, error) {
 	videos := []Video{}
 	err := svc.dbConnection()
