@@ -317,6 +317,13 @@ yt-dlp --cookies-from-browser chrome --cookies cookies.txt
 ```
 The thing is that this `cookies.txt` file is private and should not be checked in. This means that the Docker image must be generated locally.
 
+`yt-dlp` requires constant update as the team attempts to avoid Google bots:    
+
+```bash
+brew update
+brew upgrade yt-dlp
+```
+
 ## Audio Old Video
 
 If there is a need to audio an old file (prior to 2025) or re-audio a file, follow this procedure:

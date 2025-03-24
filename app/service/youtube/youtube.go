@@ -347,6 +347,10 @@ func processCodecFile(filePath string) (string, error) {
 		return "", fmt.Errorf("Error reading file: %v", err)
 	}
 
+	if len(videoLines) == 0 || len(audioLines) == 0 {
+		return "", fmt.Errorf("No matching lines found in the codec file")
+	}
+
 	return extractFirstID(videoLines[len(videoLines)-1]) + "+" + extractFirstID(audioLines[len(audioLines)-1]), nil
 }
 
