@@ -75,9 +75,12 @@ These are some project issues categorized in different buckets:
 - Risks:
     - If insert fails to Goole Sheet or Notion Database, there is no easy way to recover.
     - If a job is stuck in `running` state, the only way to recover is to delete this record from the database. The `running` state prevents additional jobs to be kicked in.
+    - Google YT API Key expiration in TEST mode. 
+    - Extractor tool constant updates may require periodic deployments.
 - Notion:
     - Powerful platform.
     - Experiment with calling the server or webhook from Notion.
+    - Reporting/Views on published at dates.
 - Automation:
     - Send updated google sheet weekly on Gmail.
 - Front-End:
@@ -88,9 +91,11 @@ These are some project issues categorized in different buckets:
     - Dockefile must be optimized.
     - Debug statement appear not strcutured in Railway log output.
     - Convert Front-End to a simple fully localized web app?
+    - Convert the `embedding` job to post to a Python ingestor. No need to add additional database dates as the embedding would run daily to embed the latest 100 videos. The videos that are already indexed will be updated. 
 - Bugs:
     - Video ID 42 encounters audio errors. Try to re-audio.
     - Extraction on server is not working. This is because Extraction does not easily work in Docker because the Youtube bot kicks in and prevent the extraction to run. See below. Currently, upon adding new videos, the application calls a Make.com automation web hook which sends an Email to me so I know to run the extraction locally. 
+    - Since the server extraction is not running, automate MacOS to kick off every day at 5:30 AM.
 
 ## Automations
 
@@ -329,9 +334,7 @@ brew upgrade yt-dlp
 If there is a need to audio an old file (prior to 2025) or re-audio a file, follow this procedure:
 
 - Locate an old video published before 2025. Get its `id`. 
-
 - Record its `pubslished_at` date.
-
 - Run this query to update its `published_at` date:
 
 ```sql
@@ -394,9 +397,3 @@ docker network prune -f
 docker system prune -a -f --volumes
 ```
 
-## Risks
-
-The following are some riks associated with the project:
-
-- Google YT API Key expiration in TEST mode. 
-- Extractor tool constant updates may require periodic deployments.
