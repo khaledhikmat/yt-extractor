@@ -150,6 +150,92 @@ func main() {
 		}
 	}()
 
+	// Run the extraction cron go routine at 05:30 AM only if we are running in dev mode
+	go func(targetHour, targetMinute int) {
+		if configSvc.IsProduction() {
+			return
+		}
+
+		for {
+			// Get the current time
+			now := time.Now()
+
+			// Calculate the next occurrence of the target time
+			next := time.Date(now.Year(), now.Month(), now.Day(), targetHour, targetMinute, 0, 0, now.Location())
+			if now.After(next) {
+				// If the target time for today has already passed, schedule for tomorrow
+				next = next.Add(24 * time.Hour)
+			}
+
+			// Calculate the duration until the next occurrence
+			durationUntilNext := time.Until(next)
+
+			// Log the wait time
+			fmt.Printf("Extraction cron job waiting until %s to execute task...\n", next.Format("2006-01-02 15:04:05"))
+
+			// Wait until the next occurrence or until the context is cancelled
+			select {
+			case <-canxCtx.Done():
+				lgr.Logger.Info(
+					"extraction cron job context cancelled",
+				)
+				return
+			case <-time.After(durationUntilNext):
+				job := data.Job{
+					ChannelID: configSvc.GetExtractionChannelID(),
+					Type:      data.JobTypeExtraction,
+				}
+				_, err = server.ProcessJob(canxCtx, job, 10, false, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc, cloudConvertSvc, transcriptionSvc)
+				if err != nil {
+					errorStream <- err
+				}
+			}
+		}
+	}(5, 30)
+
+	// Run the error extraction cron go routine at 05:55 AM only if we are running in dev mode
+	go func(targetHour, targetMinute int) {
+		if configSvc.IsProduction() {
+			return
+		}
+
+		for {
+			// Get the current time
+			now := time.Now()
+
+			// Calculate the next occurrence of the target time
+			next := time.Date(now.Year(), now.Month(), now.Day(), targetHour, targetMinute, 0, 0, now.Location())
+			if now.After(next) {
+				// If the target time for today has already passed, schedule for tomorrow
+				next = next.Add(24 * time.Hour)
+			}
+
+			// Calculate the duration until the next occurrence
+			durationUntilNext := time.Until(next)
+
+			// Log the wait time
+			fmt.Printf("Error extraction cron job waiting until %s to execute task...\n", next.Format("2006-01-02 15:04:05"))
+
+			// Wait until the next occurrence or until the context is cancelled
+			select {
+			case <-canxCtx.Done():
+				lgr.Logger.Info(
+					"error extraction cron job context cancelled",
+				)
+				return
+			case <-time.After(durationUntilNext):
+				job := data.Job{
+					ChannelID: configSvc.GetExtractionChannelID(),
+					Type:      data.JobTypeExtraction,
+				}
+				_, err = server.ProcessJob(canxCtx, job, 10, false, errorStream, configSvc, dataSvc, youtubeSvc, audioSvc, storageSvc, cloudConvertSvc, transcriptionSvc)
+				if err != nil {
+					errorStream <- err
+				}
+			}
+		}
+	}(5, 55)
+
 	// Wait for cancellation, completion or error
 	for {
 		select {

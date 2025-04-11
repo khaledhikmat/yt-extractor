@@ -322,11 +322,12 @@ yt-dlp --cookies-from-browser chrome --cookies cookies.txt
 ```
 The thing is that this `cookies.txt` file is private and should not be checked in. This means that the Docker image must be generated locally.
 
-`yt-dlp` requires constant update as the team attempts to avoid Google bots:    
+`yt-dlp` requires constant update as the team attempts to avoid Google bots. Always check [https://github.com/yt-dlp/yt-dlp/releases](https://github.com/yt-dlp/yt-dlp/releases) for latest. Install the latest:    
 
 ```bash
 brew update
 brew upgrade yt-dlp
+yt-dlp --version
 ```
 
 ## Audio Old Video
